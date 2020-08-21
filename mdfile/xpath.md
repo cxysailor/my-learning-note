@@ -142,6 +142,8 @@
 
 ### 6.1 爬取58同城上二手房的房源信息 
 
+知识点：xpath标签定位与文本、属性值的获取
+
 ```python
 #!/usr/bin/env python3
 # encoding: utf-8
@@ -266,6 +268,8 @@ if __name__ == "__main__":
 
 ### 6.2 爬取彼岸图网的美女图片
 
+知识点：解决中文乱码问题
+
 ```python
 #!/usr/bin/env python3
 # encoding: utf-8
@@ -338,6 +342,179 @@ if __name__ == "__main__":
     nbap = NetBiAnPic()
     nbap.save_images()
     print('All Completed!')
+
+```
+
+### 6.3 爬取真气网上的城市名称
+
+知识点：多个xpath表达式写在一起，使用|分隔，表示or
+
+```python
+#!/usr/bin/env python3
+# encoding: utf-8
+# coding style: pep8
+# ====================================================
+#   Copyright (C)2020 All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : xpath_city.py
+#   Last Modified : 2020-08-21 13:35
+#   Describe      : 
+#
+# ====================================================
+import requests
+from lxml import etree
+
+
+class GetAllCity():
+    """获取真气网上的城市名称"""
+    def __init__(self):
+        super(GetAllCity, self).__init__()
+        self.url = 'https://www.aqistudy.cn/historydata/'
+        self.headers = {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:79.0) Gecko/20100101 Firefox/79.0'
+        }
+        self.city_list = []  # 存储城市
+
+    def get_info(self):
+        """获取信息"""
+        page_text = requests.get(url=self.url, headers=self.headers).text
+        #  print(page_text)
+        tree = etree.HTML(page_text)
+        # 将两个xpath表达式写在一起 - 这个例子的知识点
+        a_list = tree.xpath('//div[@class="bottom"]/ul/li/a | //div[@class="bottom"]/ul/div[2]/li/a')
+        for a in a_list:
+            city = a.xpath('./text()')[0]
+            self.city_list.append(city)
+        print(self.city_list, len(self.city_list))
+
+
+if __name__ == "__main__":
+    gac = GetAllCity()
+    gac.get_info()
+
+```
+### 6.4 爬取站长素材中的免费简历模板
+
+**分析及思路** 
+
+```html
+1. 爬取并解析：http://sc.chinaz.com/jianli/free.html
+2. 获取其中每个模板的url：
+xpath表达式：//*[@id="container"]/div[1]/a/@href
+元素标签
+<a target="_blank" href="http://sc.chinaz.com/jianli/200821223120.htm">
+   <img src="http://pic1.sc.chinaz.com/Files/pic/jianli/202008/jianli13378_s.jpg" alt="英语简历格式范文">
+</a>
+3. 对每个模板的url爬取并解析
+4. 获取每个模板的下载链接
+xpath表达式：//*[@id="down"]/div[2]/ul/li[1]/a/@href
+元素标签
+<a href="http://downsc.chinaz.net/Files/DownLoad/jianli/202008/jianli13378.rar" target="_blank">福建电信下载</a>
+5. 爬取每个模板的下载链接，即可完成模板下载
+6. 第一页的url是以free.html结尾，与后面的页面url不一致，且不能直接加上_1.html，所以需要做处理
+7. 第二页是从free_2.html开始的，注意不是free_1.html
+
+```
+
+```python3
+#!/usr/bin/env python3
+# encoding: utf-8
+# coding style: pep8
+# ====================================================
+#   Copyright (C)2020 All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : xpath_template.py
+#   Last Modified : 2020-08-21 15:06
+#   Describe      : 爬取站长素材中的免费模板
+#
+# ====================================================
+import os
+import time
+import requests
+from lxml import etree
+
+
+class TemplateGet():
+    """docstring for TemplateGet"""
+    def __init__(self):
+        super(TemplateGet, self).__init__()
+        self.url = 'http://sc.chinaz.com/jianli/free.html'
+        self.headers = {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36'
+        }
+        self.url_list = []
+        self.temp_name = []
+
+    def get_page(self, url):
+        """获取免费模板页的网页源代码"""
+        page_text = requests.get(url=url, headers=self.headers).text
+        tree = etree.HTML(page_text)
+        return tree
+
+    def get_max_page_num(self):
+        """获取页面的最大数值"""
+        t = self.get_page(self.url)
+        # 获取页面的最大数值 - 即共有多少个页面
+        max_b = t.xpath('//div[@class="pagination fr clearfix clear"]/a/b')[-1]
+        max_page = int(max_b.xpath('./text()')[0])
+        return max_page
+
+    def get_each_url(self, url):
+        """获取每一页的url以及模板的名称"""
+        tree = self.get_page(url)
+        # 获取每个模板对应的a标签
+        each_a_list = tree.xpath('//*[@id="container"]/div/a')
+        for each_a in each_a_list:
+            # 获取每个模板对应的url
+            each_url = each_a.xpath('./@href')[0]
+            # 获取每个模板的名称
+            each_name = each_a.xpath('./img/@alt')[0].encode('iso-8859-1').decode('utf-8')
+            self.url_list.append(each_url)
+            self.temp_name.append(each_name)
+        return self.url_list, self.temp_name
+
+    def download_save_data(self, url):
+        """下载一个页面中每个免费模板并保存"""
+        if not os.path.exists('./template_lib'):
+            os.mkdir('./template_lib')
+        urls, names = self.get_each_url(url)
+        for n in range(len(urls)):
+            # 爬取每个模板的详情页面内容
+            each_page_text = requests.get(url=urls[n], headers=self.headers).text
+            each_tree = etree.HTML(each_page_text)
+            # 获取模板的下载链接
+            down_url = each_tree.xpath('//*[@id="down"]/div[2]/ul/li[1]/a[1]/@href')[0]
+            #  print(down_url)
+            # 下载模板
+            each_data = requests.get(url=down_url, headers=self.headers).content
+            # 保存文件路径
+            file_path = './template_lib/' + str(n + 1) + names[n] + '.rar'
+            # 保存下载的模板
+            with open(file_path, mode='wb') as fp:
+                fp.write(each_data)
+            print(f'第{n}个下载完成')
+            time.sleep(2)
+
+
+if __name__ == "__main__":
+    tg = TemplateGet()
+    max_p = tg.get_max_page_num()  # 免费模板的页面总数
+    #  print(max_page)
+    # 这个循环控制的是每一个页面
+    for nu in range(2):
+    #  for nu in range(max_p):  # 下载所有的免费模板页面
+        url = 'http://sc.chinaz.com/jianli/free'  # 由于第一页与其他页面的url不一样，需要特殊处理
+        if nu == 0:
+            url = url + '.html'
+        else:
+            url = url + '_' + str(nu + 1) + '.html'  # 第二页是free_2.html结尾
+        print(url)
+        tg.download_save_data(url)
+    print('Done !')
 
 ```
 
