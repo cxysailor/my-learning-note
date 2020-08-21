@@ -296,9 +296,22 @@ Warning: Permanently added 'github.com' (RSA) to the list of known hosts.
 如果是从零开始，最好的方法是从远程克隆到本地。即先在远程创建一个仓库，再克隆到本地。
 
 1. 登录Github，创建一个仓库名为test_repo
-2. `git clone git@github.com:github_id/test_repo.git` 
-3. 本地就会生成一个名为test_repo的目录,克隆成功
+2. `git clone git@github.com:github_id/test_repo.git ~/local_path` 
+3. 本地~/local_path目录就会生成一个名为test_repo的目录,克隆成功
 4. 如果是多人协作开发，则每个人都克隆一份即可
+
+```git
+cxysailor@cxy-Desktop MINGW64 ~/Desktop
+$ git clone git@github.com:cxysailor/my-learning-note.git k:\python_learning
+Cloning into 'k:python_learning'...
+remote: Enumerating objects: 1159, done.
+remote: Counting objects: 100% (1159/1159), done.
+remote: Compressing objects: 100% (1051/1051), done.
+remote: Total 1159 (delta 97), reused 1151 (delta 95), pack-reused 0
+Receiving objects: 100% (1159/1159), 20.08 MiB | 19.00 KiB/s, done.
+Resolving deltas: 100% (97/97), done.
+
+```
 
 ## 13. 解决冲突
 
