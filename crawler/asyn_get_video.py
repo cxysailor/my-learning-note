@@ -8,7 +8,7 @@
 #   Email         : cxysailor@163.com
 #   File Name     : asyn_get_video.py
 #   Last Modified : 2020-08-22 20:18
-#   Describe      :
+#   Describe      : Release 1.0
 #
 # ====================================================
 import os
@@ -74,3 +74,7 @@ if __name__ == "__main__":
     pool = Pool(4)
     v_information = glv.get_each_video_url()
     pool.map(glv.download_save_data, v_information)
+    pool.close()  # 关闭pool，使其不再接受新的任务
+    #  pool.terminate()  # 结束工作进程，不再处理未完成的任务
+    pool.join()  # 主进程阻塞，等待子进程退出
+    pool.join()

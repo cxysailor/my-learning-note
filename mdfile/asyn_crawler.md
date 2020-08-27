@@ -81,8 +81,15 @@ if __name__ == "__main__":
 - 优点：可以降低系统对线程或进程创建和销毁的频率，从而降低对系统的开销
 - 缺点：池中的线程或进程数量是有上限的，当阻塞的操作数超过池的上限时，还是会影响效率
 - 使用原则：将阻塞且耗时的操作使用进程池、线程池处理
+3. 单线程 + 异步协程 - 推荐使用这种方式
+- event_loop:事件循环，相当于一个无限循环。可以把一些函数注册到这个事件循环上，当满足某些条件时，函数就会循环执行
+- coroutine:协程对象，可以将协程对象注册到事件循环，它会被事件循环调用
+- async:关键字，用于定义一个协程。使用async关键字定义一个方法，这个方法在调用时不会被立即执行，而是返回一个协程对象
+- task：任务，是会协程对象的进一步封装，包含来任务的各个状态
+- future:代表将来执行或还没有执行的任务，实际上与task没有本质的区别
+- await:用来挂起阻塞方法的执行
 
-## 3. 异步的效率
+## 3. 进程池的效率
 
 这个是一段单线程串行执行的代码
 
@@ -269,6 +276,10 @@ if __name__ == "__main__":
     pool = Pool(4)
     v_information = glv.get_each_video_url()
     pool.map(glv.download_save_data, v_information)
+    pool.close()  # 关闭pool，使其不再接受新的任务
+    #  pool.terminate()  # 结束工作进程，不再处理未完成的任务
+    pool.join()  # 主进程阻塞，等待子进程退出
+    pool.join()
 
 ```
 
@@ -287,5 +298,93 @@ if __name__ == "__main__":
 9 [Process exited 0]                                                                      
 10                   
 ```
+将保存和下载分开写成两个函数
 
-<++>
+```python
+#!/usr/bin/env python4
+# encoding: utf-8
+# coding style: pep8
+# ====================================================
+#   Copyright (C)2020 All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : asyn_get_video.py
+#   Last Modified : 2020-08-22 20:18
+#   Describe      : Release 3.0
+#
+# ====================================================
+import os
+import re
+import time
+from multiprocessing.dummy import Pool
+import requests
+from lxml import etree
+
+
+class GetLiVideo():
+    """获取梨视频上生活板块的热门视频"""
+    def __init__(self):
+        super(GetLiVideo, self).__init__()
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36'
+        }
+        self.url = 'https://www.pearvideo.com/category_5'
+        self.video_info = []  # 保存视频的url与名称
+
+    def get_each_video_url(self):
+        """获取视频的真实url及其名称"""
+        # 对生活板块首页发起请求
+        page_text = requests.get(url=self.url, headers=self.headers).text
+        tree = etree.HTML(page_text)
+        li_list = tree.xpath('//ul[@id="listvideoListUl"]/li')
+        for li_tag in li_list:
+            # 视频详情页url
+            detail_url = 'https://www.pearvideo.com/' + li_tag.xpath('./div/a/@href')[0]
+            # 视频名称
+            video_name = li_tag.xpath('./div/a//div[@class="vervideo-title"]/text()')[0] + '.mp4'
+            # 爬取视频详情页url获取其真实的url供下载
+            video_url_page = requests.get(url=detail_url, headers=self.headers).text
+            # 使用正则解析 - 因为真实url在js代码中，xpath和bs4都无法解析
+            pattern = 'srcUrl="(.*?)",vdoUrl'
+            video_url = re.findall(pattern, video_url_page)[0]
+            video_dict = {
+                'url': video_url,
+                'name': video_name
+            }
+            self.video_info.append(video_dict)
+        return self.video_info
+
+    def download_data(self, video_data):
+        """下载数据 - 阻塞并耗时的操作，加进进程池"""
+        name = video_data['name']
+        url = video_data['url']
+        print('Downloading...', name)
+        video_content = requests.get(url=url, headers=self.headers).content
+        self.save_data(name, video_content)
+        time.sleep(2)
+        print('Completed: ', name)
+
+    def save_data(self, name, data):
+        """保存数据"""
+        file_path = './videos/' + name
+        with open(file_path, mode='wb') as fp:
+            fp.write(data)
+
+
+if __name__ == "__main__":
+    # 创建文件保存路径
+    if not os.path.exists('./videos'):
+        os.mkdir('./videos')
+    glv = GetLiVideo()
+    # 实例化进程池 - 包含4个进程
+    pool = Pool(4)
+    v_information = glv.get_each_video_url()
+    pool.map(glv.download_data, v_information)  # pool.man()返回一个列表
+    pool.close()  # 关闭pool，使其不再接受新的任务
+    #  pool.terminate()  # 结束工作进程，不再处理未完成的任务
+    pool.join()  # 主进程阻塞，等待子进程退出
+    pool.join()
+
+```
+
