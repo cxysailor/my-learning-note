@@ -115,7 +115,7 @@ class GetDetailsAdmission():
         info_list = self.data_handle()
         df = pd.DataFrame(info_list)
         df.columns = self.idx
-        df.to_csv('./nn1.txt')
+        df.to_csv('./nn.txt')
         # 按照文史类与理工类统计录取人数
         print(df.groupby('科类名称').sum())
 
