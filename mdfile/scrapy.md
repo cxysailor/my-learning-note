@@ -484,7 +484,7 @@ class QiubaiSpider(scrapy.Spider):
     start_urls = ['https://www.qiushibaike.com/text/']
 
     def parse(self, response):
-        """解析段子的作者和段子内容"""
+        """解析段子的作者和段子内容 - 基于终端指令存储"""
         div_list = response.xpath('//*[@id="content"]/div/div[2]/div')
         # 存储封装起来的数据
         all_data = []
@@ -537,4 +537,133 @@ class QiubaiSpider(scrapy.Spider):
 3 directories, 12 files
 
 ```
+### 7.2 基于管道存储
 
+优点：通用性强，可以保存到本地各种格式的文件中，也可以保存到数据库中
+
+缺点：编写代码时比较繁琐
+
+**存储流程** 
+
+1. 在爬虫程序中解析数据，上例中解析出来了author和content两个数据
+2. 在item类(即items.py)中定义对应的两个属性
+
+```python
+# items.py
+
+# Define here the models for your scraped items
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/items.html
+
+import scrapy
+
+
+class QiubaiProItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+	
+	# 下面两个就是定义好的对应的属性
+    author = scrapy.Field()
+    content = scrapy.Field()
+    #  pass
+
+```
+
+3. 将解析的数据封装存储到item类型的对象
+
+```python
+# qiubai.py
+
+import scrapy
+from qiubai_pro.items import QiubaiProItem
+
+
+class QiubaiSpider(scrapy.Spider):
+    name = 'qiubai'
+    allowed_domains = ['https://www.qiushibaike.com/']
+    start_urls = ['https://www.qiushibaike.com/text/']
+
+    def parse(self, response):
+        """解析段子的作者和段子内容 - 基于管道存储"""
+        div_list = response.xpath('//*[@id="content"]/div/div[2]/div')
+        # 存储封装起来的数据
+        all_data = []
+        for div in div_list:
+            author = div.xpath('./div[1]/a[2]/h2/text()')[0].extract()
+            content = div.xpath('./a[1]/div/span//text()').extract()
+            content = ''.join(content)
+
+            # 实例化item对象
+            item = QiubaiProItem()
+            # 将数据封装到item对象中
+            item['author'] = author
+            item['content'] = content
+            # 将封装好的item对象提交给管道
+            yield item
+
+```
+
+4. 将item类型的对象提交给管道进行持久化存储的操作
+5. 在管道类(pipelines.py)的process_item中要将其接收到的item对象中的数据进行持久化存储操作
+
+```python
+pipelines.py
+
+# Define your item pipelines here
+#
+# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+# useful for handling different item types with a single interface
+from itemadapter import ItemAdapter
+
+
+class QiubaiProPipeline:
+    fp = None
+    def process_item(self, item, spider):
+        """专门用来处理item类型对象 - 可以接收爬虫文件提交过来的item对象
+        这个方法每接收到一个item对象，就会被调用一次
+        """
+        # 取出接收到的item对象中的数据
+        author = item['author']
+        content = item['content']
+
+        # 将数据存储到本地
+        self.fp.write(author + ':' + content + '\n')
+        return item
+
+    def open_spider(self, spider):
+        """重写父类的方法 - 开始爬虫
+        这个方法只在开始爬虫的时候被调用一次
+        """
+        print('开始爬虫...')
+        self.fp = open('./qiubai.txt', mode='w', encoding='utf-8')
+
+    def close_spider(self, spider):
+        """重写父类方法 - 结束爬虫"""
+        print('结束爬虫!')
+        self.fp.close()
+
+```
+
+6. 在配置文件中开启管道
+
+```python
+# 在settings.py中找到下面的内容
+
+#ITEM_PIPELINES = {                                                                                                                                        
+#    'qiubai_pro.pipelines.QiubaiProPipeline': 300,
+#}
+
+# 取消前面的注释
+ITEM_PIPELINES = {                                                                                                                                        
+    'qiubai_pro.pipelines.QiubaiProPipeline': 300,
+}
+# 这里的300表示的是优先级，数值越小则优先级越大
+```
+
+7. 执行爬虫后就会中当前目录下生成一个qiubai.txt的文件
+
+`scrapy crawl qiubai` 
