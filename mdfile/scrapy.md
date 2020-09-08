@@ -139,6 +139,30 @@ first_blood
         └── __init__.cpython-38.pyc
 
 3 directories, 10 files
+```
+一个完整的scrapy项目建立好后，其完整目录结构
+
+```bash
+❯ tree first_blood
+first_blood
+├── first_blood  # 该项目的python模块
+│   ├── __init__.py
+│   ├── items.py  # item是保存爬取到的数据的容器
+│   ├── middlewares.py  # 中间件文件
+│   ├── pipelines.py  # 项目管道文件 - 持久化
+│   ├── __pycache__
+│   │   ├── __init__.cpython-38.pyc
+│   │   └── settings.cpython-38.pyc
+│   ├── settings.py  # 项目的设置文件
+│   └── spiders  # 放置爬虫代码的目录
+│       ├── first.py  # 爬虫文件
+│       ├── __init__.py
+│       └── __pycache__
+│           ├── first.cpython-38.pyc
+│           └── __init__.cpython-38.pyc
+└── scrapy.cfg  # 项目的配置文件
+
+4 directories, 12 files
 
 ```
 
@@ -151,6 +175,8 @@ first_blood
 ## 5. 爬虫源文件first.py
 
 ```python
+# spiders/first.py
+
 import scrapy
 
 
@@ -265,6 +291,8 @@ scrapy crawl first
 原因就在这里
 
 ```bash
+# settings.py
+
 {'BOT_NAME': 'first_blood',
  'EDITOR': '/usr/bin/nano',
  'NEWSPIDER_MODULE': 'first_blood.spiders',
@@ -343,6 +371,8 @@ Created spider 'qiubai' using template 'basic' in module:
 ### 6.3 修改settings.py文件
 
 ```python
+# settings.py
+
 ROBOTSTXT_OBEY = False  # 将True改为False
 
 LOG_LEVEL = 'ERROR'  # 添加这一行内容
@@ -351,6 +381,8 @@ LOG_LEVEL = 'ERROR'  # 添加这一行内容
 ### 6.4 进入spider/qiubai.py文件编写代码
 
 ```python
+# qiubai.py
+
 import scrapy
 
 
@@ -383,6 +415,8 @@ class QiubaiSpider(scrapy.Spider):
 那么如何获取出所需要的信息呢？可以使用extract()方法，即代码变成如下
 
 ```python
+# qiubai.py
+
 import scrapy
 
 
@@ -417,6 +451,8 @@ class QiubaiSpider(scrapy.Spider):
 不过，内容仍然是一个列表，可以使用join()方法获取，即对content进行如下处理：
 
 ```python
+# qiubai.py
+
 import scrapy
 
 
@@ -475,6 +511,8 @@ Scrapy的持久化存储有2中方式
 还是上面的代码例子，对数据进行一下封装，然后返回封装的数据进行存储
 
 ```python
+# qiubai.py
+
 import scrapy
 
 
@@ -608,7 +646,7 @@ class QiubaiSpider(scrapy.Spider):
 5. 在管道类(pipelines.py)的process_item中要将其接收到的item对象中的数据进行持久化存储操作
 
 ```python
-pipelines.py
+# pipelines.py
 
 # Define your item pipelines here
 #
@@ -667,3 +705,236 @@ ITEM_PIPELINES = {
 7. 执行爬虫后就会中当前目录下生成一个qiubai.txt的文件
 
 `scrapy crawl qiubai` 
+
+### 7.3 将数据一份存储到本地，一份存储到数据库的操作
+
+要实现这样的操作，需要完成2个步骤
+
+1. 在管道文件pipelines.py中创建相应的管道类
+
+一个管道类对应的是将一组数据存储到一个平台或者一个载体中
+
+比如上例中已经有了将数据存储到本地的类QiubaiProPipeline,若想将数据再存储到MySQL数据库
+
+那么就再创建一个存储到MySQl数据库的类，比如MysqlProPipeline类
+
+在MysqlProPipeline类中创建与QiubaiProPipeline类相同的方法
+
+2. 在settings.py文件中的ITEM_PIPELINES中将新建的类写入
+3. 当有多个管道类的时候，item数据对象会先传递给优先级高的管道类，然后再传递给下一个要执行的管道类，以此类推
+
+具体代码：
+
+```python
+# pipelines.py
+
+# Define your item pipelines here
+#
+# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+# useful for handling different item types with a single interface
+from itemadapter import ItemAdapter
+import pymysql
+
+class QiubaiProPipeline:
+    fp = None
+    def process_item(self, item, spider):
+        """专门用来处理item类型对象 - 可以接收爬虫文件提交过来的item对象
+        这个方法每接收到一个item对象，就会被调用一次
+        """
+        # 取出接收到的item对象中的数据
+        author = item['author']
+        content = item['content']
+
+        # 将数据存储到本地
+        self.fp.write(author + ':' + content + '\n')
+        return item  # 会将item传递给下一个即将执行的管道类，这里是MysalProPipeline
+
+    def open_spider(self, spider):
+        """重写父类的方法 - 开始爬虫
+        这个方法只在开始爬虫的时候被调用一次
+        """
+        print('开始爬虫...')
+        self.fp = open('./qiubai.txt', mode='w', encoding='utf-8')
+
+    def close_spider(self, spider):
+        """重写父类方法 - 结束爬虫"""
+        print('结束爬虫!')
+        self.fp.close()
+
+
+class MysqlProPipeline(object):
+    """将数据保存到数据库 - 会接收上一个执行的管道类传递过来的item"""
+
+    conn = None
+    cursor = None
+
+    def open_spider(self, spider):
+        """开始爬虫，连接到数据库"""
+        self.conn = pymysql.connect(
+            host='localhost',
+            port=3306,
+            user='root',
+            passwd='password',
+            db='spiderdata',
+            charset='utf8'
+            )
+
+    def process_item(self, item, spider):
+        """处理item数据"""
+        self.cursor = self.conn.cursor()  # 创建游标
+        try:
+            self.cursor.execute('insert into qiubai values("%s", "%s")' % (item["author"], item["content"]))
+            self.conn.commit()
+        except Exception as e:
+            print(e)
+            self.conn.rollback()
+
+        return item  # 再将tiem传递给下一个要执行的管道类
+
+    def close_spider(self, spider):
+        """关闭爬虫"""
+        self.cursor.close()
+        self.conn.close()
+
+```
+
+```python
+# settins.py
+
+ITEM_PIPELINES = {
+    'qiubai_pro.pipelines.QiubaiProPipeline': 300,  # 300表示优先级，数值越小则优先级越大
+	# 新建的管道类 - 保存到数据库
+    'qiubai_pro.pipelines.MysqlProPipeline': 301,  # 300表示优先级，数值越小则优先级越大
+}
+```
+
+注意：一个小细节，每个管道类的process_item方法中都写上return item这一句，以便将item数据对象传递给下一个将要执行的管道类
+
+## 8. 全站数据爬取
+
+即将某个网站上某个页面中所有页码对应的页面内容爬取下来
+
+本次目标：爬取校花网上美女校花页面上所有图片的名称
+
+有2种实现方法：
+- 将要爬取的url全部写入到start_urls列表中 - 但是不推荐这种方法，因为若url太多时操作比较繁琐
+- 推荐使用自行手动进行请求发送
+		- yield scrapy.Request(url=url, callback=self.parse)
+		- callback专门用于数据解析
+
+创建工程
+
+```bash
+scrapy startproject xiaohua_pro
+```
+创建爬虫
+
+```bash
+cd xiaohua_pro
+
+scrapy genspider xiaohua http://www.521609.com/meinvxiaohua/
+```
+
+代码实现:
+
+```python
+# xiaohua.py
+
+import scrapy
+
+
+class XiaohuaSpider(scrapy.Spider):
+    name = 'xiaohua'
+    #  allowed_domains = ['http://www.521609.com/meinvxiaohua/']
+    start_urls = ['http://www.521609.com/meinvxiaohua/']
+
+    # 生成一个url模板
+    url = 'http://www.521609.com/meinvxiaohua/list12%d.html'
+    page_num = 2
+
+    def parse(self, response):
+        li_list = response.xpath('/html/body/div[4]/div[2]/div[2]/ul/li')
+        for li in li_list:
+            img_name = li.xpath('./a[2]/text() | ./a[2]/b/text()').extract_first()
+            print(img_name)
+
+        if self.page_num <= 11:
+            new_url = format(self.url % self.page_num)
+            print(new_url)
+            self.page_num += 1
+            # 手动发送请求
+            # callback回调parse函数进行数据解析，因为所有页面的解析方式都一样
+            yield scrapy.Request(url=new_url, callback=self.parse)
+
+```
+```python
+# settings.py
+
+#USER_AGENT = 'xiaohua_pro (+http://www.yourdomain.com)'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'
+
+# Obey robots.txt rules
+ROBOTSTXT_OBEY = False
+
+LOG_LEVEL = 'ERROR'
+```
+
+## 9. Scrapy五大核心组件
+
+结构简图
+
+![Scrapy流程图1](./scrapy_1.png) 
+
+结构详细图
+
+主要步骤（往复循环）：
+
+1. Spiders（自己书写的爬虫逻辑，处理url及网页等【spider genspider -t 指定模板  爬虫文件名 域名】),返回Requests给engine——>
+
+2. engine拿到requests返回给scheduler（什么也没做）——>
+
+3. 然后scheduler会生成一个requests交给engine（url调度器）——>
+
+4. engine通过downloader的middleware一层一层过滤然后将requests交给downloader——>
+
+5. downloader下载完成后又通过middleware过滤将response返回给engine——>
+
+6. engine拿到response之后将response通过spiders的middleware过滤后返回给spider，然后spider做一些处理（如返回items或requests）——>
+
+7. spiders将处理后得到的一些items和requests通过中间件过滤返回给engine——>
+
+8. engine判断返回的是items或requests，如果是items就直接返回给item pipelines，如果是requests就将requests返回给scheduler（和第二步一样）
+
+![Scrapy流程图2](./scrapy_2.png) 
+
+**五大核心组件** 
+- 引擎(Scrapy Engine)
+    - 整个系统的数据流处理、触发事件(框架的核心)
+- 调度器(Scheduler)
+    - 包括2部分:过滤器和队列。接收引擎发过来的请求，经过过滤器去重后压入队列，并在引擎再次请求的时候返回
+	- 可以想像成一个url的优先队列，由它来决定下一个要抓取的网址，并除掉重复的
+- 下载器(Downloader)
+	- 用于下载网页内容，并将内容通过引擎返回给爬虫Spider
+	- 下载器是建立在twisted这个高效的异步模型之上的
+- 爬虫(Spiders)
+	- 爬虫是主要干活的
+	- 用于从特定的网页中提取需要的信息，即所谓的实体(Item)
+	- 也可以提取出链接，让爬虫继续爬取下一个页面
+- 项目管道(Pipeline)
+	- 负责处理爬虫从网页中提取的实体(Item)
+	- 主要功能是持久化实体、验证实体的有效性、清除不需要的信息
+	- 当页面被爬虫解析后，将被发送到项目管道，并经过几个特定的次序处理数据
+
+**另外还有2个组件**
+- 下载器中间件(Downloader Middlewares)
+    - 在引擎及下载器之间的特定钩子(specific hook),处理下载器传递给引擎的response
+    - 可以扩展下载器和引擎之间通信功能的中间件
+- 爬虫中间件 (Spider Middlewares)
+    - 在引擎及爬虫之间的特定钩子(specific hook),处理爬虫的输入和输出
+    - 输入 - 接收来自下载器的response
+    - 输出 - 发送items给管道以及发送requests给调度器
+    - 可以扩展引擎和爬虫之间通信功能的中间件
+

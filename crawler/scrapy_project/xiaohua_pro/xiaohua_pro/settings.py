@@ -1,4 +1,4 @@
-# Scrapy settings for qiubai_pro project
+# Scrapy settings for xiaohua_pro project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -7,14 +7,14 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'qiubai_pro'
+BOT_NAME = 'xiaohua_pro'
 
-SPIDER_MODULES = ['qiubai_pro.spiders']
-NEWSPIDER_MODULE = 'qiubai_pro.spiders'
+SPIDER_MODULES = ['xiaohua_pro.spiders']
+NEWSPIDER_MODULE = 'xiaohua_pro.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#  USER_AGENT = 'qiubai_pro (+http://www.yourdomain.com)'
+#USER_AGENT = 'xiaohua_pro (+http://www.yourdomain.com)'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0'
 
 # Obey robots.txt rules
@@ -48,13 +48,13 @@ LOG_LEVEL = 'ERROR'
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'qiubai_pro.middlewares.QiubaiProSpiderMiddleware': 543,
+#    'xiaohua_pro.middlewares.XiaohuaProSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
-#    'qiubai_pro.middlewares.QiubaiProDownloaderMiddleware': 543,
+#    'xiaohua_pro.middlewares.XiaohuaProDownloaderMiddleware': 543,
 #}
 
 # Enable or disable extensions
@@ -65,10 +65,9 @@ LOG_LEVEL = 'ERROR'
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-    'qiubai_pro.pipelines.QiubaiProPipeline': 300,  # 300表示优先级，数值越小则优先级越大
-    'qiubai_pro.pipelines.MysqlProPipeline': 301,  # 300表示优先级，数值越小则优先级越大
-}
+#ITEM_PIPELINES = {
+#    'xiaohua_pro.pipelines.XiaohuaProPipeline': 300,
+#}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

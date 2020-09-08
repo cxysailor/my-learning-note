@@ -6,7 +6,7 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
-
+import pymysql
 
 class QiubaiProPipeline:
     fp = None
@@ -20,7 +20,7 @@ class QiubaiProPipeline:
 
         # 将数据存储到本地
         self.fp.write(author + ':' + content + '\n')
-        return item
+        return item  # 会将item传递给下一个即将执行的管道类，这里是MysalProPipeline
 
     def open_spider(self, spider):
         """重写父类的方法 - 开始爬虫
@@ -33,3 +33,38 @@ class QiubaiProPipeline:
         """重写父类方法 - 结束爬虫"""
         print('结束爬虫!')
         self.fp.close()
+
+
+class MysqlProPipeline(object):
+    """将数据保存到数据库 - 会接收上一个执行的管道类传递过来的item"""
+
+    conn = None
+    cursor = None
+
+    def open_spider(self, spider):
+        """开始爬虫，连接到数据库"""
+        self.conn = pymysql.connect(
+            host='localhost',
+            port=3306,
+            user='root',
+            passwd='password',
+            db='spiderdata',
+            charset='utf8'
+            )
+
+    def process_item(self, item, spider):
+        """处理item数据"""
+        self.cursor = self.conn.cursor()  # 创建游标
+        try:
+            self.cursor.execute('insert into qiubai values("%s", "%s")' % (item["author"], item["content"]))
+            self.conn.commit()
+        except Exception as e:
+            print(e)
+            self.conn.rollback()
+
+        return item  # 再将tiem传递给下一个要执行的管道类
+
+    def close_spider(self, spider):
+        """关闭爬虫"""
+        self.cursor.close()
+        self.conn.close()
