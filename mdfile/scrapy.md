@@ -938,3 +938,745 @@ LOG_LEVEL = 'ERROR'
     - 输出 - 发送items给管道以及发送requests给调度器
     - 可以扩展引擎和爬虫之间通信功能的中间件
 
+## 10. 请求传参
+
+请求传参就是中发起请求的时候传递的数据值(参数)
+
+请求传参的使用场景:若爬取解析的数据不在同一个页面中(即需要深度爬取时)时使用
+
+比如要爬取boss直聘网站上的岗位名称和岗位描述 - 目前使用普通的方法已经无法爬取到boss招聘的数据了，本例仅仅说明请求传参的方法与流程
+
+由于岗位名称和岗位描述不在同一个页面中，所以在发送请求的时候需要传递参数(请求传参)
+
+1. 创建工程
+
+```bash
+scrapy startproject boss_pro
+```
+2. 创建爬虫程序
+
+```bash
+cd boss_pro
+
+scrapy genspider boss www.zhipin.com/
+```
+3. 修改settings文件
+
+```python
+# settings.py
+
+# Crawl responsibly by identifying yourself (and your website) on the user-agent
+#USER_AGENT = 'boss_pro (+http://www.yourdomain.com)'
+
+# 添加这一行内容
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+
+# Obey robots.txt rules
+ROBOTSTXT_OBEY = False  # 将True改为False
+
+# 添加这一行内容
+LOG_LEVEL = 'ERROR'
+```
+4. 创建item实例 - items.py文件
+
+```python
+# items.py
+
+# Define here the models for your scraped items
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/items.html
+
+import scrapy
+
+
+class BossProItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    job_name = scrapy.Field()  # 岗位名称
+    job_desc = scrapy.Field()  # 岗位描述
+
+```
+
+5. 编辑boss.py文件
+
+    5.1 完成一个页面的爬取
+
+```python
+# boss.py
+
+import scrapy
+from boss_pro.items import BossProItem
+
+
+class BossSpider(scrapy.Spider):
+    name = 'boss'
+    #  allowed_domains = ['www.zhipin.com/']
+    start_urls = ['https://www.zhipin.com/job_detail/?query=python&city=100010000&industry=&position=100109']
+
+    def parse(self, response):
+        """解析岗位名称及其对应的岗位描述内容的url"""
+        li_list = response.xpath('//*[@id="main"]/div/div[2]/ul/li')
+        print(li_list)
+        for li_tag in li_list:
+            item = BossProItem()  # 实例化一个item对象
+            job_name = li_tag.xpath('.//div[@class="job-title"]/span[1]/a/text()').extract_first()
+            base_url = 'https://www.zhipin.com'
+            detail_url = base_url + li_tag.xpath('.//div[@class="jog-title"]/span[1]/a/@href').extract_first()
+            # 将job_name封装到item中
+            item['job_name'] = job_name
+
+            # 对详情页detail_url发起请求获取详情页的数据 - 需要手动发送请求
+            # 由于岗位名称与岗位描述不在同一个页面上
+            # 数据解析的方法就不一样
+            # 所以callback不能调用self.parse了
+            # 需要重新定义一个解析函数，对岗位描述进行解析
+            # 岗位描述job_desc是在另外一个函数parse_detail中解析的，所以要将item传递过去
+            # 可以中yield语句中加上meta={}参数来实现item的传递 - 由于是中发送请求的过程中传递的参数，故叫请求传参
+            yield scrapy.Request(url=detail_url, callback=self.parse_detail, meta={'item': item})
+
+    def parse_detail(self, response):
+        """解析详情页中的岗位描述内容"""
+        # 回调函数接收请求传参传递过来的item - 这样就完成来请求传参的过程，将item传递过来了
+        item = response.meta['item']
+        job_desc = response.xpath('//*[@id="main"]/div[3]/div/div[2]/div[2]/div[1]/div//text()').extract()
+        job_desc = ''.join(job_desc)
+        # 将job_desc封装到item中
+        item['job_desc'] = job_desc
+        # 将封装了岗位名称和岗位描述的item提交给管道，进行存储
+        yield item
+
+```
+
+    5.2 对请求传参的过程做一个简单的描述
+
+   - 在主调函数parse中实例化item
+   - 将主调函数中解析的岗位名称job_name封装到item中
+   - 使用meta={'item': item}参数，在yield语句中将封装了job_name的item传递给被调(回调)函数parse_detail
+   - 回调函数parse_detail通过response.meta['item']将item接收过来，可以进行进一步的处理
+
+    5.3 完成多个页面的爬取
+
+```python
+# boss.py
+
+import scrapy
+from boss_pro.items import BossProItem
+
+
+class BossSpider(scrapy.Spider):
+    name = 'boss'
+    #  allowed_domains = ['www.zhipin.com/']
+    start_urls = ['https://www.zhipin.com/job_detail/?query=python&city=100010000&industry=&position=100109']
+    base_url = 'https://www.zhipin.com/c100010000/?query=python&page=%d'
+    page_num = 2  # 因为第一页已经爬取了，故从第二页开始
+
+    def parse(self, response):
+        """解析岗位名称及其对应的岗位描述内容的url"""
+        li_list = response.xpath('//*[@id="main"]/div/div[2]/ul/li')
+        print(li_list)
+        for li_tag in li_list:
+            item = BossProItem()  # 实例化一个item对象
+            job_name = li_tag.xpath('.//div[@class="job-title"]/span[1]/a/text()').extract_first()
+            base_url = 'https://www.zhipin.com'
+            detail_url = base_url + li_tag.xpath('.//div[@class="jog-title"]/span[1]/a/@href').extract_first()
+            # 将job_name封装到item中
+            item['job_name'] = job_name
+
+            # 对详情页detail_url发起请求获取详情页的数据 - 需要手动发送请求
+            # 由于岗位名称与岗位描述不在同一个页面上
+            # 数据解析的方法就不一样
+            # 所以callback不能调用self.parse了
+            # 需要重新定义一个解析函数，对岗位描述进行解析
+            # 岗位描述job_desc是在另外一个函数parse_detail中解析的，所以要将item传递过去
+            # 可以中yield语句中加上meta={}参数来实现item的传递 - 由于是中发送请求的过程中传递的参数，故叫请求传参
+            yield scrapy.Request(url=detail_url, callback=self.parse_detail, meta={'item': item})
+
+        # 执行分页爬取的功能 - 完成所有页面的爬取
+        if self.page_num <= 3:
+            new_url = format(self.base_url % self.page_num)
+            self.page_num += 1
+            # 发送请求
+            yield scrapy.Request(new_url, callback=self.parse)
+
+    def parse_detail(self, response):
+        """解析详情页中的岗位描述内容"""
+        # 回调函数接收请求传参传递过来的item - 这样就完成来请求传参的过程，将item传递过来了
+        item = response.meta['item']
+        job_desc = response.xpath('//*[@id="main"]/div[3]/div/div[2]/div[2]/div[1]/div//text()').extract()
+        job_desc = ''.join(job_desc)
+        # 将job_desc封装到item中
+        item['job_desc'] = job_desc
+        # 将封装了岗位名称和岗位描述的item提交给管道，进行存储
+        yield item
+```
+
+6. 管道中存储到本地
+
+```python
+# pipelines.py
+
+# Define your item pipelines here
+#
+# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+# useful for handling different item types with a single interface
+from itemadapter import ItemAdapter
+
+
+class BossProPipeline:
+    fp = None
+
+    def open_spider(self, spider):
+        """爬虫开始"""
+        self.fp = open('./boss.txt', mode='w', encoding='utf-8')
+
+    def process_item(self, item, spider):
+        """处理item并保存到本地"""
+        job_name = item['job_name']
+        job_desc = item['job_desc']
+        self.fp.write(job_name + ':' + job_desc + '\n')
+        return item
+
+    def close_spider(self, spider):
+        """结束爬虫"""
+        self.fp.close()
+
+```
+## 11. 图片数据爬取的管道类 - ImagesPipeline
+
+基于scrapy的爬取字符串类型数据与爬取图片类型数据的区别：
+
+- 爬取字符串类型数据 - 仅需要使用xpath解析然后提交给管道存储即可
+- 爬取图片类型数据 - xpath解析出图片的src属性值(图片url)，单独的对图片url发起请求获取图片二进制类型的数据
+
+scrapy提供了一个专门的图片类型数据的管道类 - ImagesPipeline
+
+- 将获取的图片url提交给这个管道类
+- 管道类会对这个图片url发起请求并获取图片的二进制数据
+- 同时，把获取的图片二进制数据进行持久化存储
+
+ImagesPipeline的工作流程 - 通过示例说明
+
+示例需求：爬取站长素材网站上的图片 https://sc.chinaz.com/tupian/
+
+1. 创建工程与爬虫文件
+
+```bash
+❯ scrapy startproject imgs_pro
+New Scrapy project 'imgs_pro', using template directory '/home/cxy/.local/lib/python3.8/site-packages/scrapy/templates/project', created in:
+    /home/cxy/python_learning/crawler/scrapy_project/imgs_pro
+
+You can start your first spider with:
+    cd imgs_pro
+    scrapy genspider example example.com
+❯ cd imgs_pro
+❯ scrapy genspider img https://sc.chinaz.com/tupian/
+Created spider 'img' using template 'basic' in module:
+  imgs_pro.spiders.img
+
+```
+2. 设置settings.py文件
+
+```python
+# Crawl responsibly by identifying yourself (and your website) on the user-agent
+#USER_AGENT = 'boss_pro (+http://www.yourdomain.com)'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+
+# Obey robots.txt rules
+ROBOTSTXT_OBEY = False
+
+LOG_LEVEL = 'ERROR'
+
+# 图片存储路径                                        
+IMAGES_STORE = './imgs'
+```
+3. 知识点 - 图片懒加载
+
+先来看下代码的执行结果
+
+```python
+# img.py
+
+import scrapy
+
+
+class ImgSpider(scrapy.Spider):
+    name = 'img'
+    #  allowed_domains = ['https://sc.chinaz.com/tupian/']
+    start_urls = ['https://sc.chinaz.com/tupian/']
+
+    def parse(self, response):
+        """解析出图片的url"""
+        div_list = response.xpath('//*[@id="container"]/div')
+        for div in div_list:
+            img_src = div.xpath('./div/a/img/@src').extract_first()
+            print(img_src)
+
+# 输出结果:
+
+❯ scrapy crawl img
+None
+None
+None
+None
+None
+None
+None
+...
+```
+为什么获取的都是None，而不是预期的图片url呢?
+
+这个就是懒加载的原因造成的
+
+- 什么是懒加载?
+    - 懒加载突出一个“懒”字，懒就是拖延、延迟的意思，所以“懒加载”说白了就是延迟加载，比如我们加载一个页面，这个页面很长很长，长到我们的浏览器可视区域装不下，那么懒加载就是优先加载可视区域的内容，其他部分等进入了可视区域再加载。
+- 为什么要使用懒加载?
+    - 懒加载是一种网页性能优化的方式，它能极大的提升用户体验。就比如说图片，图片一直是影响网页性能的主要元凶，现在一张图片超过几兆已经是很经常的事了。如果每次进入页面就请求所有的图片资源，那么可能等图片加载出来用户也早就走了。所以，我们需要懒加载，进入页面的时候，只请求可视区域的图片资源
+    - 总结出来就2点
+        - 全部加载的话会影响用户体验
+        - 浪费用户的流量，有些用户并不想全部看完，全部加载会耗费大量流量
+- 懒加载的实现原理
+    - 由于网页中占用资源较多的一般是图片，所以我们一般实施懒加载都是对图片资源而言的，所以这里的实现原理主要是针对图片
+
+    - 大家都知道，一张图片就是一个img标签，而图片的来源主要是src属性。浏览器是否发起请求就是根据是否有src属性决定的
+
+    - 既然这样，那么我们就要对img标签的src属性下手了，在没进入可视区域的时候，我们先不给这个img标签赋src属性，这样岂不是浏览器就不会发送请求了
+    - 等到图片进入可视区域时，再给img标签赋src属性
+- 所以，实现懒加载的关键就是对可视区域的判断了，具体的实现方法可以参考[原生js实现图片懒加载（lazyLoad）](https://zhuanlan.zhihu.com/p/55311726) 
+
+具体到本例中，看一下网页源代码
+
+```html
+这个是排在前面的已经进入可视区域的img标签 - 已经被赋予了src属性
+<img alt="腼腆微笑美女图片" src="http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27741_s.jpg">
+而后面大部分没有进入可视区域的img标签都有一个伪属性src2 - 这个就是无法获取的原因
+<img src2="http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27730_s.jpg" alt="唯美欧式建筑摄影图片">
+```
+要想获取到src属性，只要将xpath解析表达式中的src改为src2即可
+
+即在解析的时候要使用伪属性
+
+```python
+# img.py
+
+import scrapy
+
+
+class ImgSpider(scrapy.Spider):
+    name = 'img'
+    #  allowed_domains = ['https://sc.chinaz.com/tupian/']
+    start_urls = ['https://sc.chinaz.com/tupian/']
+
+    def parse(self, response):
+        """解析出图片的url"""
+        div_list = response.xpath('//*[@id="container"]/div')
+        for div in div_list:
+		    # 对应懒加载 - 要使用其伪属性来解析
+            img_src = div.xpath('./div/a/img/@src2').extract_first()
+            print(img_src)
+
+# 输出结果 - 获取到了预期的url
+❯ scrapy crawl img
+http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27741_s.jpg
+http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27744_s.jpg
+http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27746_s.jpg
+http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27742_s.jpg
+http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27745_s.jpg
+http://pic.sc.chinaz.com/Files/pic/pic9/202009/apic27743_s.jpg
+http://pic.sc.chinaz.com/Files/pic/pic9/202009/bpic21273_s.jpg
+http://pic.sc.chinaz.com/Files/pic/pic9/202009/bpic21274_s.jpg
+http://pic.sc.chinaz.com/Files/pic/pic9/202009/bpic21276_s.jpg
+...
+```
+4. 定义item
+
+```python
+# items.py
+
+# Define here the models for your scraped items
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/items.html
+
+import scrapy
+
+
+class ImgsProItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    src = scrapy.Field()  # 图片的src属性
+
+```
+5. 完成img.py
+
+```python
+# img.py
+
+import scrapy
+from imgs_pro.items import ImgsProItem
+
+
+class ImgSpider(scrapy.Spider):
+    name = 'img'
+    #  allowed_domains = ['https://sc.chinaz.com/tupian/']
+    start_urls = ['https://sc.chinaz.com/tupian/']
+
+    def parse(self, response):
+        """解析出图片的url"""
+        div_list = response.xpath('//*[@id="container"]/div')
+        for div in div_list:
+            # 对于懒加载 - 要使用其伪属性来解析数据
+            src = div.xpath('./div/a/img/@src2').extract_first()
+            print(src)
+
+            # 实例化item对象
+            item = ImgsProItem()
+            # 将获取的图片url封装
+            item['src'] = src
+            # 将item提交
+            yield item
+    
+```
+6. 获取到图片的url并提交给了管道，接下来是管道类的处理
+
+管道类中默认生成的类ImgsProPipeline不能实现图片的爬取与保存目的，我们需要重新写一个ImagesPipeline类来专门处理图片的数据
+
+- 首先需要导入这个类
+```python
+from scrapy.pipelines.images import ImagesPipeline 
+```
+- 重新定义一个处理图片的类 - 这个类继承自ImagesPipeline
+
+- 在新定义的类中重写父类的3个方法
+    - get_media_requests(self, item, info)
+    - file_path(self, request, response=None, info=None)
+    - item_completed(self, results, item, info)
+
+具体代码
+
+```python
+# pipelines.py
+
+# Define your item pipelines here
+#
+# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+# useful for handling different item types with a single interface
+from itemadapter import ItemAdapter
+import scrapy
+from scrapy.pipelines.images import ImagesPipeline
+
+
+#  class ImgsProPipeline:
+#      def process_item(self, item, spider):
+#          return item
+
+
+class ImgsPipeline(ImagesPipeline):
+    """新定义的处理图片的类"""
+    # 重写父类的3个方法
+
+    def get_media_requests(self, item, info):
+        """根据图片url进行图片请求"""
+        yield scrapy.Request(item['src'])
+
+    def file_path(self, request, response=None, info=None):
+        """指定图片数据持久化存储的路径"""
+        # 获取图片名称 - 从url分离出来，取最后一部分apic27741_s.jpg
+        # http://pic1.sc.chinaz.com/Files/pic/pic9/202009/apic27741_s.jpg
+        img_name = request.url.split('/')[-1]
+        return img_name
+
+    def item_completed(self, results, item, info):
+        """完成item的处理 - 并返回给下一个即将执行的管道类"""
+        return item  # 将item返回给下一个即将执行下管道类
+
+```
+7. 在设置文件settings.py中开启管道
+
+```python
+# settings.py
+
+# Configure item pipelines
+# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+ITEM_PIPELINES = {
+  #  'imgs_pro.pipelines.ImgsProPipeline': 300,
+  'imgs_pro.pipelines.ImgsPipeline': 300,
+}
+```
+8. 执行爬虫程序，即可完成图片的爬取、存储操作
+
+```bash
+scrapy crawl img
+```
+**总结一下ImagesPipeline的工作流程** 
+
+- 在爬虫文件中进行数据解析 - 仅需要解析出图片的地址(img标签的src属性值)
+- 将封装了图片地址的item提交给管道类
+- 在管道文件pipelines.py中，自定义一个基于ImagesPipeline的管道类
+- 在自定义的ImagesPipeline管道类中重写父类的3个方法
+    - get_media_requests() - 发送请求
+    - file_path() - 指定图片数据持久化存储的路径
+    - item_completed() - 完成item处理，并将item返回给下一个即将执行的管道类
+- 在配置文件settins.py中
+    - 指定图片保存的目录 - 在文件中写入IMAGES_STORE = './imgs'即可
+    - 开启指定的管道 - 即自定义的基于ImagesPipeline的管道类
+
+
+## 12. 中间件 - Middlewares
+
+### 12.1 中间件简介
+
+Scrapy中共有2个中间件
+- Spider Middleware - 爬虫中间件，位于爬虫Spider与引擎Scrapy Engine之间。用途较小，故不介绍
+- Download Middleware - 下载中间件，位于引擎Scrapy Engine与下载器Dowloader之间
+
+
+下载中间件 - 可以批量拦截整个scrapy工程中发起的所有的请求对象与返回的响应对象
+
+下载中间件进行拦截请求与响应的目的
+- 拦截请求
+   - 实现UA伪装 - 拦截到请求对象的头信息后，可以改写其中的User-Agent,这不同于中settings.py文件中设置UA,在settings.py中设置的User-Agent是全局的、所有发送的请求都是固定的一个User-Agent;而在中间件中是针对某一个特定的请求设置的User-Agent，这样可以实现不同的请求使用不同的UA伪装。所以，若要设置多个不同的User-Agent时只能通过中间件来设置，无法通过配置文件settings.py实现。
+   - 设置代理IP
+- 拦截响应
+    - 篡改响应数据、响应对象 - 当遇到爬取的页面是动态加载的时候，返回的响应数据是无法获取到我们想要的信息的，这时就需要篡改响应对象或者响应数据，来达到我们获取想要的数据的目的
+
+
+### 12.2 处理请求
+
+拦截请求实现UA伪装与代理IP的设置
+
+1. 创建工程middle_pro和创建爬虫middle
+
+```python
+❯ scrapy startproject middle_pro
+New Scrapy project 'middle_pro', using template directory '/home/cxy/.local/lib/python3.8/site-packages/scrapy/templates/project', created in:
+    /home/cxy/python_learning/crawler/scrapy_project/middle_pro
+
+You can start your first spider with:
+    cd middle_pro
+    scrapy genspider example example.com
+❯ cd middle_pro
+❯ scrapy genspider middle www.baidu.com
+Created spider 'middle' using template 'basic' in module:
+  middle_pro.spiders.middle
+
+```
+2. 爬虫文件middle.py
+
+```python
+# middle.py
+
+import scrapy
+
+
+class MiddleSpider(scrapy.Spider):
+    name = 'middle'
+    #  allowed_domains = ['www.baidu.com']
+    start_urls = ['https://www.baidu.com/s?wd=ip']
+
+    def parse(self, response):
+
+        page_text = response.text()
+
+        with open('./ip.html', mode='w', encoding='utf-8') as fp:
+            fp.write(page_text)
+
+```
+
+3. 中间件文件middlewares.py
+
+这个文件中定义了2个中间件类：SpiderMiddleware和DownloadMiddleware
+
+我们不用爬虫中间件，故可以将SpiderMiddleware类删除，仅留下DownloadMiddleware
+
+在DownloadMiddleware类中，仅需要三个方法，其余的方法可以删除
+- process_request(self, request, spider) - 处理请求
+- process_response(self, request, response, spider) - 拦截所有的响应
+- process_exception(self, request, exception, spider) - 拦截发送异常的请求
+
+通常UA伪装是写在process_request()方法中的，当然也可以写在process_exception()中(在出现请求异常时使用UA伪装)
+
+这里就要用到UA池，即把若干个User-Agent放入一个列表，在发送时随机选一个。如果只是写一个固定的User-Agent，就与中settings.py文件中设置一样了
+
+```python
+request.headers['User-Agent'] = random.choice(us_list)
+```
+
+代理IP通常是在process_exception()方法中设置，以便在请求异常时通过使用代理ip来修正
+
+```python
+requests.meta['proxy'] = 'ip:port'
+```
+具体代码
+
+```python
+
+# middlewares.py
+
+# Define here the models for your spider middleware
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+
+import random
+from scrapy import signals
+
+# useful for handling different item types with a single interface
+from itemadapter import is_item, ItemAdapter
+
+
+class MiddleProDownloaderMiddleware:
+    # Not all methods need to be defined. If a method is not defined,
+    # scrapy acts as if the downloader middleware does not modify the
+    # passed objects.
+
+    ua_list = [
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1",
+        "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1090.0 Safari/536.6",
+        "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/19.77.34.5 Safari/537.1",
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6',
+        'Mozilla/5.0 (X11; Linux i686; U;) Gecko/20070322 Kazehakase/0.4.5',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.71 Safari/537.1 LBBROWSER',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; QQDownload 732; .NET4.0C; .NET4.0E)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11',
+        'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; SV1; QQDownload 732; .NET4.0C; .NET4.0E; 360SE)',
+        'Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.2; .NET CLR 1.1.4322; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 3.0.04506.30)',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6',
+        'Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.71 Safari/537.1 LBBROWSER',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1',
+        'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.12) Gecko/20070731 Ubuntu/dapper-security Firefox/1.5.0.12',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; QQDownload 732; .NET4.0C; .NET4.0E; LBBROWSER)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.3 Mobile/14E277 Safari/603.1.30',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
+        "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
+        "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)",
+        "Mozilla/4.0 (compatible; MSIE 7.0; AOL 9.5; AOLBuild 4337.35; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
+        "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)",
+        "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET CLR 2.0.50727; Media Center PC 6.0)",
+        "Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET CLR 1.0.3705; .NET CLR 1.1.4322)",
+        "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.2; .NET CLR 1.1.4322; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 3.0.04506.30)",
+        "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN) AppleWebKit/523.15 (KHTML, like Gecko, Safari/419.3) Arora/0.3 (Change: 287 c9dfb30)",
+        "Mozilla/5.0 (X11; U; Linux; en-US) AppleWebKit/527+ (KHTML, like Gecko, Safari/419.3) Arora/0.6",
+        "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.2pre) Gecko/20070215 K-Ninja/2.1.1",
+        "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9) Gecko/20080705 Firefox/3.0 Kapiko/3.0",
+        "Mozilla/5.0 (X11; Linux i686; U;) Gecko/20070322 Kazehakase/0.4.5",
+        "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6",
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
+        "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52",
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6',
+        'Mozilla/5.0 (X11; Linux i686; U;) Gecko/20070322 Kazehakase/0.4.5',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.71 Safari/537.1 LBBROWSER',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; QQDownload 732; .NET4.0C; .NET4.0E)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11',
+        'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; SV1; QQDownload 732; .NET4.0C; .NET4.0E; 360SE)',
+        'Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.2; .NET CLR 1.1.4322; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 3.0.04506.30)',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6',
+        'Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.71 Safari/537.1 LBBROWSER',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1',
+        'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)',
+        'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.12) Gecko/20070731 Ubuntu/dapper-security Firefox/1.5.0.12',
+        'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; QQDownload 732; .NET4.0C; .NET4.0E; LBBROWSER)',
+        'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/21.0.1180.89 Safari/537.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.3 Mobile/14E277 Safari/603.1.30',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36',
+        'Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)'
+        ]
+    proxy_http = [
+            '175.44.108.119:9999',
+            '175.42.129.49:9999',
+            '91.240.97.69:443',
+            '175.42.158.229:9999',
+            '103.152.100.5:8080',
+            '118.174.46.144:45330',
+            '180.244.39.179:8080',
+            '163.204.245.207:9999',
+            '114.104.184.122:9999',
+            '203.202.245.58:80'
+        ]
+    proxy_https = [
+            '162.144.106.245:3838',
+            '110.243.6.69:9999',
+            '162.144.61.12:3838',
+            '209.190.32.28:3128',
+            '157.130.54.90:3128'
+            ]
+
+    def process_request(self, request, spider):
+        """拦截请求"""
+        # Called for each request that goes through the downloader
+        # middleware.
+
+        # Must either:
+        # - return None: continue processing this request
+        # - or return a Response object
+        # - or return a Request object
+        # - or raise IgnoreRequest: process_exception() methods of
+        #   installed downloader middleware will be called
+
+        # 设置UA伪装
+        request.headers['User-Agent'] = random.choice(self.ua_list)
+
+        # 为了验证代理ip，所以在这里设置一个
+        request.meta['proxy'] = 'https://110.243.6.69:9999'
+        return None
+
+    def process_response(self, request, response, spider):
+        """拦截所有的响应"""
+        # Called with the response returned from the downloader.
+
+        # Must either;
+        # - return a Response object
+        # - return a Request object
+        # - or raise IgnoreRequest
+        return response
+
+    def process_exception(self, request, exception, spider):
+        """拦截发送异常的请求"""
+        # Called when a download handler or a process_request()
+        # (from other downloader middleware) raises an exception.
+
+        # Must either:
+        # - return None: continue processing this exception
+        # - return a Response object: stops process_exception() chain
+        # - return a Request object: stops process_exception() chain
+
+        # 设置代理ip
+        if request.url.split(':')[0]  == 'http':
+            request.meta['proxy'] = 'http://' + random.choice(self.proxy_http)
+        else:
+            request.meta['proxy'] = 'https://' + random.choice(self.proxy_https)
+
+        # 将修正后的请求对象返回，进行重新发送
+        return request
+```
+4. 在settings.py中开启中间件
+
+```python
+# Enable or disable downloader middlewares
+# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
+DOWNLOADER_MIDDLEWARES = {                                                                                                               
+  'middle_pro.middlewares.MiddleProDownloaderMiddleware': 543,   
+} 
+```
+

@@ -27,9 +27,9 @@ class GetDetailsAdmission():
             'admission_num',
             'highest_score',
             'lowest_score',
-            'first_solist',
-            'second_solist',
-            'third_solist',
+            'first_solicit',
+            'second_solicit',
+            'third_solicit',
             'fouth_solicit'
         ]
         # DataFrame的列标题
@@ -95,9 +95,9 @@ class GetDetailsAdmission():
                 'admission_num': '',
                 'highest_score': '',
                 'lowest_score': '',
-                'first_solist': '',
-                'second_solist': '',
-                'third_solist': '',
+                'first_solicit': '',
+                'second_solicit': '',
+                'third_solicit': '',
                 'fouth_solicit': ''
             }
             # 将提取出来的人数、最高分、最低分、征集志愿最低分依次写入字典
