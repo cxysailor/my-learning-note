@@ -1679,4 +1679,259 @@ DOWNLOADER_MIDDLEWARES = {
   'middle_pro.middlewares.MiddleProDownloaderMiddleware': 543,   
 } 
 ```
+### 12.3 拦截响应
 
+拦截响应的目的主要是用来篡改响应数据
+
+通过一个示例来说明 - 爬取网页新闻若干个板块(比如国内、国际、军事、无人机等板块)的新闻标题及内容
+
+经过分析
+- 在网易新闻首页上板块名称是静态的
+- 各个板块内的新闻标题都是通过动态加载的
+- 每个板块内的新闻内容是静态的
+
+思路
+- 通过网易新闻首页解析出需要爬取的板块对应的详情页的url - 静态
+- 每一个板块中的每一条新闻的标题都是动态加载的
+- 通过解析出每一条新闻详情页的url获取详情页的网页源码，解析出新闻内容
+
+通过代码来实现这个功能
+
+1. 创建工程wangyi_pro和爬虫wangyi
+
+```bash
+❯ scrapy startproject wangyi_pro
+New Scrapy project 'wangyi_pro', using template directory '/home/cxy/.local/lib/python3.8/site-packages/scrapy/templates/project', created in:
+    /home/cxy/python_learning/crawler/scrapy_project/wangyi_pro
+
+You can start your first spider with:
+    cd wangyi_pro
+    scrapy genspider example example.com
+❯ cd wangyi_pro
+❯ scrapy genspider wangyi https://news.163.com
+Created spider 'wangyi' using template 'basic' in module:
+  wangyi_pro.spiders.wangyi
+```
+2. 设置setting.py文件
+
+```python
+# settings.py
+
+# Crawl responsibly by identifying yourself (and your website) on the user-agent
+#USER_AGENT = 'wangyi_pro (+http://www.yourdomain.com)'
+USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36'
+
+# Obey robots.txt rules
+ROBOTSTXT_OBEY = False
+
+LOG_LEVEL = 'ERROR'
+
+# Enable or disable downloader middlewares
+# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
+DOWNLOADER_MIDDLEWARES = {
+  'wangyi_pro.middlewares.WangyiProDownloaderMiddleware': 543,
+}
+
+# Configure item pipelines
+# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+ITEM_PIPELINES = {
+  'wangyi_pro.pipelines.WangyiProPipeline': 300,
+}
+```
+3. 设置items.py
+
+```python
+# items.py
+
+# Define here the models for your scraped items
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/items.html
+
+import scrapy
+
+
+class WangyiProItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    news_title = scrapy.Field()  # 新闻标题
+    news_content = scrapy.Field()  # 新闻内容
+
+```
+4. 爬虫文件wangyi.py
+
+```python
+import scrapy
+from wangyi_pro.items import WangyiProItem
+from selenium import webdriver
+
+
+class WangyiSpider(scrapy.Spider):
+    name = 'wangyi'
+    #  allowed_domains = ['https://news.163.com']
+    start_urls = ['https://news.163.com/']
+    # 存储板块对应详情页的url
+    module_urls = []
+
+    def __init__(self):
+        self.bro = webdriver.Chrome()
+
+    def parse(self, response):
+        """解析所要爬取的板块对应的详情页的url"""
+        li_list = response.xpath('//*[@id="index2016_wrap"]/div[1]/div[2]/div[2]/div[2]/div[2]/div/ul/li')
+        module_index = [3, 4, 6, 7, 8]  # 国内、国际、军事、航空、无人机5个板块对应的li标签顺序
+        for idx in module_index:
+            module_url = li_list[idx].xpath('./a/@href').extract_first()  # 板块对应的详情页面url
+            self.module_urls.append(module_url)
+
+        # 依次对每一个板块对应的页面进行请求
+        for url in self.module_urls:
+            #  print(url)
+            yield scrapy.Request(url, callback=self.parse_each_module)
+
+    def parse_each_module(self, response):
+        """解析每一个板块页面中对应的新闻的标题和新闻内容的url,这里的response是经过篡改后的"""
+        div_list = response.xpath('/html/body/div/div[3]/div[4]/div[1]/div/div/ul/li/div/div')
+        for div_tag in div_list:
+            news_title = div_tag.xpath('./div/div/h3/a/text()').extract_first()  # 新闻标题
+            news_content_url = div_tag.xpath('./div/div/h3/a/@href').extract_first()  # 新闻内容的url
+            #  print(news_title)
+            #  print(news_content_url)
+            # 使用请求传参
+            item = WangyiProItem()
+            item['news_title'] = news_title
+            # 对新闻内容url发起请求
+            if news_content_url is None:
+                continue
+            yield scrapy.Request(url=news_content_url, callback=self.parse_content, meta={'item': item})
+
+    def parse_content(self, response):
+        """对新闻内容爬取并解析"""
+        news_content = response.xpath('//*[@id="endText"]//text()').extract()
+        news_content = ''.join(news_content)
+        item = response.meta['item']
+        item['news_content'] = news_content
+        #  print(item)
+        
+        yield item
+
+    def closed(self, spider):
+        """关闭浏览器"""
+        self.bro.quit()
+
+```
+5. 中间件文件middlewares.py
+
+```python
+# middlewares.py
+
+# Define here the models for your spider middleware
+#
+# See documentation in:
+# https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+
+import time
+from scrapy import signals
+
+# useful for handling different item types with a single interface
+from itemadapter import is_item, ItemAdapter
+from scrapy.http import HtmlResponse
+
+
+class WangyiProDownloaderMiddleware:
+    # Not all methods need to be defined. If a method is not defined,
+    # scrapy acts as if the downloader middleware does not modify the
+    # passed objects.
+
+    def process_request(self, request, spider):
+        # Called for each request that goes through the downloader
+        # middleware.
+
+        # Must either:
+        # - return None: continue processing this request
+        # - or return a Response object
+        # - or return a Request object
+        # - or raise IgnoreRequest: process_exception() methods of
+        #   installed downloader middleware will be called
+        return None
+
+    def process_response(self, request, response, spider):
+        """拦截响应对象，进行篡改，以便获取符合要求的数据"""
+        bro = spider.bro  # 获取在spider中定义的浏览器对象
+        # 挑选出指定的响应对象 - 即5个板块的响应对象 - 进行篡改：
+        # 1. 通过url指定request
+        # 2. 通过request指定response
+        if request.url in spider.module_urls:  # spider就是中wangyi.py中定义的类的实例
+            # response即是需要的5个板块的响应对象
+            # 针对这些响应对象进行篡改
+            # 需要实例化一个新的响应对象 - 符合要求的,包含动态加载的新闻数据，来替换原来的响应对象
+            # 如何获取动态加载的数据? - 可以使用selenium来实现
+            # 因为这里的方法process_response在每次请求时都会被调用，所以比较好的方式是在爬虫类wangyi.py
+            # 中实例化selenium浏览器，而不是在这里
+            bro.get(request.url)  # 对5个板块进行请求
+            time.sleep(2)
+            # 获取页面源码 - 其中就包含了动态加载的数据
+            page_text = bro.page_source
+            new_response = HtmlResponse(url=request.url, body=page_text, encoding='utf-8', request=request)
+            return new_response
+        else:
+            # response其它请求返回的响应对象，将其返回
+            return response
+
+    def process_exception(self, request, exception, spider):
+        # Called when a download handler or a process_request()
+        # (from other downloader middleware) raises an exception.
+
+        # Must either:
+        # - return None: continue processing this exception
+        # - return a Response object: stops process_exception() chain
+        # - return a Request object: stops process_exception() chain
+        pass
+
+```
+6. 管道文件pipelines.py
+
+```python
+# pipelines.py
+
+# Define your item pipelines here
+#
+# Don't forget to add your pipeline to the ITEM_PIPELINES setting
+# See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+
+
+# useful for handling different item types with a single interface
+from itemadapter import ItemAdapter
+
+
+class WangyiProPipeline:
+    fp = None
+
+    def open_spider(self, spider):
+        """开始爬虫"""
+        self.fp = open('./wangyi_news.txt', mode='w', encoding='utf-8')
+
+    def process_item(self, item, spider):
+        news_title = item['news_title']
+        news_content = item['news_content']
+        self.fp.write(news_title + ':' + news_content + '\n')
+        #  print(item)
+        return item
+
+    def close_spider(self, spider):
+        """结束爬虫"""
+        print('爬虫结束！')
+        self.fp.close()
+
+```
+7. 重要知识点总结
+
+- 由于各个板块中的新闻标题都是动态加载的，所以需要使用selenium获取动态加载的网页数据
+- 通过下载器获取的响应对象中不包含动态加载的数据，故此需要在下载中间件中拦截各个板块的响应对象进行篡改
+- 在中间件文件中的process_response(self, request, response, spider)拦截响应对象
+    - 获取实例化的selenium的webdriver对象
+    - 导入HtmlResponse类 - from scrapy.http import HtmlResponse
+    - 使用selenium获取动态数据 - 作为body参数给HtmlResoponse
+    - 实例化HtmlResponse并将其返回 - new_response = HtmlResponse(url=request.url, body=page_text, encoding='utf-8', request=request)
+- 使用新的响应对象new_response替换掉原来的响应对象，返回给响应的方法parse_each_module(self, response)进行解析出新闻标题的url
+- 再次对新闻标题的url发起请求，以获取新闻的内容 - 这些是静态加载的，常规方法获取并解析即可
