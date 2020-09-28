@@ -1935,3 +1935,77 @@ class WangyiProPipeline:
     - 实例化HtmlResponse并将其返回 - new_response = HtmlResponse(url=request.url, body=page_text, encoding='utf-8', request=request)
 - 使用新的响应对象new_response替换掉原来的响应对象，返回给响应的方法parse_each_module(self, response)进行解析出新闻标题的url
 - 再次对新闻标题的url发起请求，以获取新闻的内容 - 这些是静态加载的，常规方法获取并解析即可
+
+## 13. CrawlSpider类
+
+### 13.1 简介
+
+CrawlSpider是Spider的派生类(一个子类)，Spider类的设计原则是只爬取start_url列表中的网页，而CrawlSpider类定义了一些规则(rule)来提供跟进link的方便的机制，从爬取的网页中获取link并继续爬取的工作更适合
+
+CrawlSpider是用于爬取全站数据的, scrapy中爬取全站有2种实现方式
+- 基于Spider - 手动请求
+- 基于CrawlSpider
+
+除了继承自Spider类的属性(allowed_domains, name),CrawlSpider类还提供了一些新的属性和方法
+
+1. 链接提取器LinkExtractor(allow='re_expression')
+    - 根据指定的规则allow='re_expression' - 一个正则表达式 - 提取指定的链接
+2. 规则解析器Rule()
+
+### 13.2 创建CrawlSpider工程
+
+与创建Spider工程的命令一样
+
+```bash
+scrapy startproject project_name
+```
+### 13.3 创建CrawlSpider爬虫
+
+需要在创建爬虫文件时加上-t crawl参数
+
+```bash
+scrapy genspider -t crawl spider_name domain
+```
+### 13.4 创建一个CrawlSpider工程sun_pro和CrawlSpider爬虫sun
+
+```bash
+❯ scrapy startproject sun_pro
+New Scrapy project 'sun_pro', using template directory '/home/cxy/.local/lib/python3.8/site-packages/scrapy/templates/project', created in:
+    /home/cxy/python_learning/crawler/scrapy_project/sun_pro
+
+You can start your first spider with:
+    cd sun_pro
+    scrapy genspider example example.com
+
+❯ cd sun_pro
+
+❯ scrapy genspider -t crawl sun www.xxx.com
+Created spider 'sun' using template 'crawl' in module:
+  sun_pro.spiders.sun
+
+```
+工程的目录结构
+
+```bash
+❯ tree sun_pro
+sun_pro
+├── scrapy.cfg
+└── sun_pro
+    ├── __init__.py
+    ├── items.py
+    ├── middlewares.py
+    ├── pipelines.py
+    ├── __pycache__
+    │   ├── __init__.cpython-38.pyc
+    │   └── settings.cpython-38.pyc
+    ├── settings.py
+    └── spiders
+        ├── __init__.py
+        ├── __pycache__
+        │   └── __init__.cpython-38.pyc
+        └── sun.py
+
+4 directories, 11 files
+```
+
+<++>
