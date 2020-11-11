@@ -1,3 +1,5 @@
+[toc]
+
 # Selenium模块的基本使用
 
 [Selenium官网](https://www.selenium.dev/documentation/zh-cn/) 
@@ -113,16 +115,14 @@ driver.quit()
 
 **窗口和标签页** 
 
-| 说明                   | 属性或方法                         |
-| ------                 | ------                             |
-| 获取当前窗口的窗口句柄 | driver.current_window_handle       |
-| 打开并切换到新标签页   | driver.switch_to.new_window('tab')
-               |
+| 说明                         | 属性或方法                               |
+| ---------------------------- | ---------------------------------------- |
+| 获取当前窗口的窗口句柄       | driver.current_window_handle             |
+| 打开并切换到新标签页         | driver.switch_to.new_window('tab')       |
 | 打开一个新窗口并切换到新窗口 | driver.switch_to.new_window('window')    |
 | 关闭标签页或窗口             | driver.close()                           |
 | 切回到之前的标签页或窗口     | driver.switch_to.window(original_window) |
 | 会话结束退出浏览器           | driver.quit()                            |
-
 ### 3.5 使用chromedriver的一个问题
 
 chromedriver在打开浏览器后，当程序代码执行完毕，浏览器也跟着直接退出。

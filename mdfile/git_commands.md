@@ -47,7 +47,9 @@ git init
 为让Git忽略这个目录，在test目录下创建一个.gitignore的特殊文件，并在其中写入__pycache__
 
 ```bash
-vim .gitignore
+vim .gitignore 创建.gitignore文件
+
+在文件中写入下面的内容，保存退出即可
 
 __pycache__
 ```
@@ -69,7 +71,7 @@ git status
 
 ## 4. 将文件加入到仓库中
 
-Git在本地可以分为3个部分：工作区、缓存区、归档区，分别对应来上面流程图中的workspace、index、repository。
+Git在本地可以分为3个部分：工作区、缓存区、归档区，分别对应了上面流程图中的workspace、index、repository。
 
 文件是先使用git add命令添加到缓存区index，再通过git commit命令提交到归档区repository
 
