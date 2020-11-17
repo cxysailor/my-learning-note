@@ -7,7 +7,7 @@
 #   Author        : cxysailor
 #   Email         : cxysailor@163.com
 #   File Name     : admission.py
-#   Last Modified : 2020-08-26 16:59
+#   Last Modified : 2020-11-15 19:52
 #   Describe      :
 #
 # ====================================================
@@ -17,7 +17,7 @@ import pandas as pd
 
 class GetDetailsAdmission():
     """处理云南招考院的录取日报数据"""
-    def __init__(self, file_name='./n.txt'):
+    def __init__(self, file_name='n.txt'):
         super(GetDetailsAdmission, self).__init__()
         self.file_name = file_name  # 需要读取的数据来源文件
         self.info_list = []  # 存储处理好的信息列表

@@ -7,7 +7,7 @@
 #   Author        : cxysailor
 #   Email         : cxysailor@163.com
 #   File Name     : test.py
-#   Last Modified : 2020-11-09 21:17
+#   Last Modified : 2020-11-15 19:48
 #   Describe      :
 #
 # ====================================================
@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QApplication, QPushButton, QWidget, QHBoxLayout
 class WidgetDemo(QWidget):
     """docstring for WidgetDemo"""
     def __init__(self):
-        super(WidgetDemo, self).__init__()
+        super().__init__()
         self.btn = QPushButton('Ok')
         self.btn1 = QPushButton('Cancel')
         self.init_ui()
