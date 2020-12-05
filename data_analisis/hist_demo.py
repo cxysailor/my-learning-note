@@ -7,14 +7,14 @@
 #   Author        : cxysailor
 #   Email         : cxysailor@163.com
 #   File Name     : hist_demo.py
-#   Last Modified : 2020-11-30 10:51
+#   Last Modified : 2020-12-05 09:47
 #   Describe      : 
 #
 # ====================================================
 
 import random
 from matplotlib import pyplot as plt
-#  from matplotlib import font_manager
+from matplotlib import font_manager
 
 
 class HistDemo(object):
@@ -25,6 +25,7 @@ class HistDemo(object):
         # 解决中文显示的问题
         plt.rcParams['font.family'] = ['WenQuanYi Micro Hei']
         plt.rcParams['axes.unicode_minus'] = False
+        self.my_font = font_manager.FontProperties(fname='/usr/share/fonts/wenquanyi/wqy-microhei-lite/wqy-microhei-lite.ttc')
         # 数据列表
         self.datas = []
         # 组距
@@ -48,11 +49,11 @@ class HistDemo(object):
         # 设置x轴的刻度
         plt.xticks(range(min(self.datas), max(self.datas) + self.bin_width, self.bin_width))
         # 添加x轴标题
-        plt.xlabel('电影时长(分钟)')
+        plt.xlabel('电影时长(分钟)', fontproperties=self.my_font)
         # 添加y轴标题
-        plt.ylabel('电影的数量')
+        plt.ylabel('电影的数量', fontproperties=self.my_font)
         # 添加标题
-        plt.title('直方图-电影时长分布统计图')
+        plt.title('直方图-电影时长分布统计图', fontproperties=self.my_font)
         # 添加网格线
         plt.grid()
         # 显示图形
