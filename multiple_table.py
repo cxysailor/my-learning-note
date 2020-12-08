@@ -7,12 +7,22 @@
 #   Author        : cxysailor
 #   Email         : cxysailor@163.com
 #   File Name     : multiple_table.py
-#   Last Modified : 2020-11-08 10:10
+#   Last Modified : 2020-12-05 17:55
 #   Describe      : 
 #
 # ====================================================
 
-for num1 in range(1, 10):
-    for num2 in range(1, num1 + 1):
-        print('%d x %d = %2d' % (num2, num1, num1 * num2), end=' ')
-    print('')
+
+class MultiplicationTable(object):
+    """九九乘法表"""
+
+    def multiplication_table(self):
+        for num1 in range(1, 10):
+            for num2 in range(1, num1 + 1):
+                print('%d x %d = %2d' % (num2, num1, num1 * num2), end=' ')
+            print('')
+
+
+if __name__ == "__main__":
+    mt = MultiplicationTable()
+    mt.multiplication_table()

@@ -324,3 +324,7 @@ Resolving deltas: 100% (97/97), done.
 用git log --graph命令可以看到分支合并图
 
 以上列出来git与github的一些基本操作，具体详细的内容请参考Github。
+
+## 14. 关于Error: Permission denied (publickey)错误提示到解决
+
+参看[Error: Permission denied (publickey)](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/error-permission-denied-publickey) 
