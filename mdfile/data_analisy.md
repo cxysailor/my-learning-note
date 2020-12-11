@@ -225,3 +225,328 @@ if __name__ == "__main__":
 
 ### 7. 标注annotation
 
+添加标注有2种方法：
+
+- annotate()方法
+- text()方法
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class AddAnnotation(object):
+    """docstring for AddAnnotation"""
+    def __init__(self):
+        super(AddAnnotation, self).__init__()
+        self.x = np.linspace(-3, 3, 50)
+        self.y = self.x * 2 + 1
+
+    def generate_figure(self):
+        plt.figure(num=1, figsize=(8, 5))
+        plt.plot(self.x, self.y)
+
+        ax = plt.gca()
+        ax.spines['right'].set_color('none')
+        ax.spines['top'].set_color('none')
+
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+
+        ax.spines['bottom'].set_position(('data', 0))
+        ax.spines['left'].set_position(('data', 0))
+
+        # 画出点(1, 3)即x=1,y=2×1+1=3
+        x0 = 1
+        y0 = 2 * x0 + 1
+        plt.scatter(x0, y0, color='green', s=50)
+        # 从该点画一条垂线与x轴相交
+        plt.plot([x0, x0], [y0, 0], 'k--', lw=2.5)  # k--表示黑色短划线
+
+        # 添加标注 - 方法1 -画一个箭头指向该点，并标注说明文字2x+1=3
+        plt.annotate(r'$2x + 1 = %s$' % y0, 
+                xy=(x0, y0), xycoords='data',
+                xytext=(+30, -30), textcoords='offset points',
+                fontsize=16,
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3, rad=.2', color='red'))
+        # 添加标注 - 方法2 - 添加一段文字描述
+        plt.text(-3.7, 7, r'$The\ quick\ brown\ fox\ jumps\ over\ a\ lazy\ dog.\ \mu\ \sigma_i\ \alpha^t$',
+                fontdict={'size': 16, 'color': 'red'})
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    aa = AddAnnotation()
+    aa.generate_figure()
+```
+![Figure_5](./Figure_5.png)
+
+### 8. 透明度transparency
+
+由于图形的宽度等原因导致遮盖了图形下面的一些数据，比如
+
+![Figure_6-1](./Figure_6-1.png) 
+
+为了将下面的数据显现出来，可以设置图形的zorder(z-order),即显示顺序，zorder的数值越大，图像就越会显示在上方
+
+具体参考[Matplotlib zorder](https://matplotlib.org/gallery/misc/zorder_demo.html#sphx-glr-gallery-misc-zorder-demo-py) 
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class Transparency(object):
+    """docstring for AddAnnotation"""
+    def __init__(self):
+        self.x = np.linspace(-3, 3, 50)
+        self.y = self.x * 0.1
+
+    def generate_figure(self):
+        plt.figure(num=1, figsize=(8, 5))
+        # 设置zorder=1
+        plt.plot(self.x, self.y, linewidth=10, zorder=1)
+        plt.ylim(-2, 2)
+
+        ax = plt.gca()
+        ax.spines['right'].set_color('none')
+        ax.spines['top'].set_color('none')
+
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+
+        ax.spines['bottom'].set_position(('data', 0))
+        ax.spines['left'].set_position(('data', 0))
+
+        # 对标签的字体和边框进行设置
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontsize(12)
+            # bbox - bounding box
+            label.set_bbox(dict(facecolor='white', edgecolor='None', alpha=0.7))
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    t = Transparency()
+    t.generate_figure()
+```
+![Figure_6-2](./Figure_6-2.png)
+
+### 9. 散点图Scatter
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class MatplotlibScatter(object):
+    """散点图"""
+    def __init__(self):
+        super(MatplotlibScatter, self).__init__()
+        self.n = 1024
+        self.X = np.random.normal(0, 1, self.n)
+        self.Y = np.random.normal(0, 1, self.n)
+        # 设置颜色
+        self.T = np.arctan2(self.Y, self.X)
+
+    def generate_figure(self):
+        plt.scatter(self.X, self.Y, s=75, c=self.T, alpha=0.5)
+        plt.xlim(-1.5, 1.5)
+        plt.ylim(-1.5, 1.5)
+        # 隐藏x、y轴的刻度
+        plt.xticks(())
+        plt.yticks(())
+        plt.show()
+
+
+if __name__ == "__main__":
+    ms = MatplotlibScatter()
+    ms.generate_figure()
+```
+![Figure_7](./Figure_7.png) 
+
+### 10. 柱状图Bar
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class MatplotlibBar(object):
+    """柱状图"""
+    def __init__(self):
+        super(MatplotlibBar, self).__init__()
+        self.n = 12
+        self.X = np.arange(self.n)
+        self.Y1 = (1 - self.X / float(self.n)) * np.random.uniform(0.5, 1.0, self.n)
+        self.Y2 = (1 - self.X / float(self.n)) * np.random.uniform(0.5, 1.0, self.n)
+
+    def generate_figure(self):
+        plt.xlim(-.5, self.n)
+        plt.ylim(-1.25, 1.25)
+
+        plt.xticks(())
+        plt.yticks(())
+
+        # 绘制柱状图
+        plt.bar(self.X, +self.Y1, facecolor='#9999ff', edgecolor='white')
+        plt.bar(self.X, -self.Y2, facecolor='#ff9999', edgecolor='white')
+
+        # 在柱状图的顶/底部添加对应数字标签
+        # ha - horizotal alignment; va - vertical alignment
+        for x, y in zip(self.X, self.Y1):
+            plt.text(x, y, '%.2f' % y, ha='center', va='bottom')
+        for x, y in zip(self.X, self.Y2):
+            plt.text(x, -(y), '%.2f' % y, ha='center', va='top')
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    mb = MatplotlibBar()
+    mb.generate_figure()
+```
+![Figure_8](./Figure_8.png) 
+
+### 11. 等高线图contour
+
+```python
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class MatplotlibContour(object):
+    """等高线图"""
+    def __init__(self):
+        super(MatplotlibContour, self).__init__()
+        self.n = 256
+        self.x = np.linspace(-3, 3, self.n)
+        self.y = np.linspace(-3, 3, self.n)
+        self.X, self.Y = np.meshgrid(self.x, self.y)
+
+    def contour(self, x, y):
+        """生成高程的函数"""
+        return (1 - x / 2 + x ** 5 + y ** 3) * np.exp(-x ** 2 - y ** 2)
+
+    def generate_figure(self):
+        """画等高线"""
+        # 填充等高线底色
+        # 数字8这里表示的是等高线的疏密程度
+        plt.contourf(self.X, self.Y, self.contour(self.X, self.Y), 8, alpha=0.75, cmap=plt.cm.hot)
+        # 添加等高线
+        C = plt.contour(self.X, self.Y, self.contour(self.X, self.Y), 8, colors='black', linewidths=.5)
+        # 在等高线上添加高程数字标签
+        plt.clabel(C, inline=True, fontsize=10)
+
+        plt.xticks(())
+        plt.yticks(())
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    mc =MatplotlibContour()
+    mc.generate_figure()
+```
+![Figure_9](./Figure_9.png) 
+
+### 12. 图像image
+
+```python
+#!/usr/bin/env python3
+# encoding: utf-8
+# coding style: pep8
+# ====================================================
+#   Copyright (C) 2020 cxysailor-master All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : matplotlib_image.py
+#   Last Modified : 2020-12-10 23:01
+#   Describe      : 
+#
+# ====================================================
+
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+class MatplotlibImage(object):
+    """docstring for MatplotlibImage"""
+    def __init__(self):
+        super(MatplotlibImage, self).__init__()
+        # 图片数据
+        self.a = np.array([
+            0.313660827978, 0.36534818405, 0.423733120134,
+            0.36534818405, 0.439599930621, 0.525083754405,
+            0.423733120134, 0.525083754405, 0.651536351379
+        ]).reshape(3, 3)
+
+    def generate_figure(self):
+        # 根据数据画图
+        plt.imshow(self.a, interpolation='nearest', cmap='bone', origin='lower')
+        # 添加颜色条
+        plt.colorbar()
+
+        plt.xticks(())
+        plt.yticks(())
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    mi = MatplotlibImage()
+    mi.generate_figure()
+```
+![Figure_10](./Figure_10.png) 
+
+### 13. 3D数据
+
+```python
+#!/usr/bin/env python3
+# encoding: utf-8
+# coding style: pep8
+# ====================================================
+#   Copyright (C) 2020 cxysailor-master All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : matplotlib_3d.py
+#   Last Modified : 2020-12-11 22:27
+#   Describe      : 
+#
+# ====================================================
+
+from matplotlib import pyplot as plt
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+
+
+class Mpl3D(object):
+    """docstring for Mpl3D"""
+    def __init__(self):
+        super(Mpl3D, self).__init__()
+        self.x = np.arange(-4, 4, 0.25)
+        self.y = np.arange(-4, 4, 0.25)
+
+    def generate_figure(self):
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        X, Y = np.meshgrid(self.x, self.y)
+        R = np.sqrt(X ** 2 + Y ** 2)
+        Z = np.sin(R)
+
+        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=plt.get_cmap('rainbow'))
+        ax.contourf(X, Y, Z, zdir='z', offset=-2, cmap='rainbow')
+        ax.set_zlim3d(-2, 2)
+
+        plt.show()
+
+
+if __name__ == "__main__":
+    md = Mpl3D()
+    md.generate_figure()
+```
+![Figure_11](./Figure_11.png) 
