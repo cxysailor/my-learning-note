@@ -44,7 +44,7 @@ Linux的shell种类很多，常见的有
 
 ## 3. shell脚本的执行方式
 
-### (1). 脚本格式要求
+### 3.1 脚本格式要求
 
 - 脚本以 **#!/bin/bash** 开头
 - 脚本需要有可执行权限
@@ -62,7 +62,7 @@ echo "Hello, World!"
 - **#!** 是一个约定的标记，它告诉系统这个脚本需要什么解释器来执行，即用那一种shell
 - **echo** 命令用于向窗口输出文本
 
-### (2). 运行shell脚本的2种方式
+### 3.2 运行shell脚本的2种方式
 
 - **方式1 - 作为可执行程序**
 
@@ -97,7 +97,7 @@ Hello, World!
 ```
 ## 4. shell变量
 
-### (1) 变量的类型
+### 4.1 变量的类型
 
 运行shell时，会同时存在3种变量
 
@@ -112,7 +112,7 @@ Hello, World!
 		- 使用set命令可以显示所有的系统变量
 - **shell变量** shell变量是由shell程序设置的特殊变量，shell变量中有一部分是环境变量，有一部分是局部变量，这些变量保证了shell的正常运行
 
-### (2) 变量的定义
+### 4.2 变量的定义
 
 ***基本语法***
 
@@ -143,6 +143,7 @@ for file in `ls /etc`
 或
 for file in $(ls /etc)
 ```
+
 以上语句将/etc目录下的文件名循环出来
 
 ***只读(静态)变量 - read only*** 
@@ -157,8 +158,10 @@ myUrl="https://www.runoob.com" # 试图改变变量myUrl的值 - 结果不成功
 # 运行后会输出如下结果
 ❯ sh ./readonly_var.sh
 ./readonly_var.sh: line 16: myUrl: readonly variable
+
 ```
-### (3) 变量的使用
+
+### 4.3 变量的使用
 
 使用一个定义过的变量，只要在变量名前面加美元符号$即可
 
@@ -187,6 +190,7 @@ A=100
 A=100
 ❯ echo "A=$A"
 A=100
+
 ```
 这里的A=会原样输出，在遇到美元符号$后，其后面的内容会被解释器识别为变量，输出其值为100
 
@@ -200,6 +204,7 @@ I am good at AdaScript
 I am good at CoffeScript
 I am good at ActionScript
 I am good at JavaScript
+
 ```
 如果不给skill变量加上花括号，写成echo "I am good at \$skillScript", 解释器就会把\$skillScript当成一个变量(其值为空)，代码就不是期望的输出结果了
 
@@ -211,6 +216,7 @@ I am good at
 I am good at 
 I am good at 
 I am good at
+
 ```
 ***推荐在使用变量时给所有变量加上花括号，这是一个好的编程习惯*** 
 
@@ -226,7 +232,7 @@ tom
 jerry
 
 ```
-### (4) 变量的删除 - unset
+### 4.4 变量的删除 - unset
 
 ```bash
 unset variable_name
@@ -248,7 +254,7 @@ unset命令不能删除只读(静态)变量
 ❯ unset mycat # 试图使用unset删除变量mycat - 结果不成功
 zsh: read-only variable: mycat # 提示mycat是只读变量
 ```
-### (5) 将命令的返回结果赋给变量
+### 4.5 将命令的返回结果赋给变量
 
 ```bash
 variable=`command` # 使用反引号``
@@ -264,7 +270,7 @@ C=Wed Dec 30 22:33:32 CST 2020
 ❯ echo "D=${D}"
 D=Wed Dec 30 22:33:45 CST 2020
 ```
-### (6) 将变量设置为环境(全局/系统)变量
+### 4.6 将变量设置为环境(全局/系统)变量
 
 将变量设置为环境变量的目的:
 
@@ -298,14 +304,14 @@ export TOMCAT_HOME=/opt/tomcat
 ```
 ## 5. shell的注释方法
 
-### (1) 单行注释
+### 5.1 单行注释
 
 在行首加上#
 
 ```bash
 # This is single row comment
 ```
-### (2) 多行注释
+### 5.2 多行注释
 
 ```bash
 :<<!
@@ -315,11 +321,11 @@ The quich brown fox jumps over a lazy dog
 ```
 ## 6. 位置参数变量
 
-### (1) 位置参数变量简介
+### 6.1 位置参数变量简介
 
 当我们执行一个shell脚本时，如果希望获取到命令行的参数信息，就可以使用到位置参数变量。比如`./myshell.sh 100 200`，这个就是一个执行shell脚本的命令行，可以在myshell.sh脚本中获取到参数信息(即获取到位置参数100或200)
 
-### (2) 基本语法
+### 6.2 基本语法
 
 | 语法   | 功能                   | 说明                     |
 | ------ | ------                 | ------                   |
@@ -337,7 +343,7 @@ The quich brown fox jumps over a lazy dog
     - ${*}等价于"1 2 3" - 即传递了一个参数
     - ${@}等价于"1" "2" "3" - 传递了三个参数
 
-### (3) 举例说明
+### 6.3 举例说明
 
 ```bash
 # myshell.sh
@@ -360,11 +366,11 @@ echo "参数的总数=${#}"
 ```
 ## 7. 预定义变量
 
-### (1) 简介
+### 7.1 简介
 
 预定义变量就是shell设计者事先已经定义好的变量，可以直接在shell脚本中使用
 
-### (2) 基本语法
+### 7.2 基本语法
 
 |语法 |功能 |说明 |
 |------ |------ |------ |
@@ -372,7 +378,7 @@ echo "参数的总数=${#}"
 |$! |后台运行的最后一个进程的进程号PID |获取其PID |
 |$? |最后一次执行的命令的返回状态,正确与否 |若这个变量的值为0,则说明上一个命令正确执行;若是非0(具体由命令自己决定是那个数),则上一个命令执行不正确 |
 
-### (3) 举例说明
+### 7.3 举例说明
 
 ```bash
 # pre_var.sh
@@ -410,7 +416,7 @@ shell和其它编程语言一样，支持多种运算符
 
 expr是一款表达式计算工具，使用它能完成表达式的求值操作
 
-### (1) 运算式的3种方式
+### 8.1 运算式的3种方式
 
 - \$((运算式))
 - \$[运算式]
@@ -439,7 +445,7 @@ SUM=$[${1}+${2}]
 echo "Sum is ${SUM}"
 ```
 
-### (2) 算术运算符
+### 8.2 算术运算符
 
 下表列出了常用的算术运算符
 
@@ -500,7 +506,7 @@ b / a : 2
 b % a : 0
 a 不等于 b
 ```
-### (3) 关系运算符
+### 8.3 关系运算符
 
 关系运算符只支持数字，不支持字符串，除非字符串的值是数字
 
@@ -577,7 +583,7 @@ fi
 10 -ge 20 : a 小于 b
 10 -le 20 : a 小于或等于 b
 ```
-### (4) 布尔运算符
+### 8.4 布尔运算符
 
 常用的布尔运算符,假定变量a=10；变量b=20
 
@@ -631,5 +637,717 @@ fi
 10 小于 100 或 20 大于 100 : 返回 true
 10 小于 5 或 20 大于 100 : 返回 false
 ```
+### 8.5 逻辑运算符
 
-<++>
+shell的逻辑运算符,假定变量a=10；变量b=20
+
+| 运算符 | 说明       | 举例                                 | 结果   |
+| ------ | ------     | ------                               | ------ |
+| &&     | 逻辑的 AND | [[ ${a} -lt 100 && ${b} -gt 100 ]]   | false  |
+| \|\|   | 逻辑的 OR  | [[ ${a} -lt 100 \|\| ${b} -gt 100 ]] | true   |
+
+实例
+
+```bash
+# logical_oper.sh
+
+#!/bin/bash
+
+a=10
+b=20
+
+if [[ ${a} -lt 100 && ${b} -gt 100 ]]
+then
+    echo "返回 true"
+else
+    echo "返回 false"
+fi
+
+if [[ ${a} -lt 100 || ${b} -gt 100 ]]
+then
+    echo "返回 true"
+else
+    echo "返回 false"
+fi
+
+执行并输出结果
+❯ ./logical_oper.sh
+返回 false
+返回 true
+```
+
+### 8.6 字符串运算符
+
+常用字符串运算符,假定变量a为"abc",变量b为"efg"
+
+|运算符 |说明 |举例 |结果 |
+|------ |------ |------ |------ |
+|= |检测两个字符串是否相等,相等返回true |[ ${a} = ${b} ] |false |
+|!= |检测两个数是否相等,不相等返回true |[ ${a} != ${b} ] |true |
+|-z |检测字符串长度是否为0,为0返回true |[ -z ${a} ] |false |
+|-n |检测字符串长度是否不为0,不为0返回true |[ -n "${a}" ] |true |
+|$ |检测字符串是否为空,不为空返回true |[ ${a} ] |true |
+
+实例
+
+```bash
+# string_oper.sh
+
+#!/bin/bash
+
+a="abc"
+b="efg"
+
+if [ ${a} = ${b} ]
+then
+    echo "${a} = ${b} : a 等于 b"
+else
+    echo "${a} = ${b} : a 不等于 b"
+fi
+
+if [ ${a} != ${b} ]
+then
+    echo "${a} != ${b} : a 不等于 b"
+else
+    echo "${a} != ${b} : a 等于 b"
+fi
+
+if [ -z ${a} ]
+then
+    echo "-z ${a} : 字符串长度为 0"
+else
+    echo "-z ${a} : 字符串长度不为 0"
+fi
+
+if [ -n ${a} ]
+then
+    echo "-n ${a} : 字符串长度不为 0"
+else
+    echo "-n ${a} : 字符串长度为 0"
+fi
+
+if [ ${a} ]
+then
+    echo "${a} : 字符串不为空"
+else
+    echo "${a} : 字符串为空"
+fi
+
+执行并输出结果
+❯ ./string_oper.sh
+abc = efg : a 不等于 b
+abc != efg : a 不等于 b
+-z abc : 字符串长度不为 0
+-n abc : 字符串长度不为 0
+abc : 字符串不为空
+```
+### 8.7 文件测试运算符
+
+文件测试运算符用于检测Unix文件的各种属性
+
+|运算符 |说明 |举例 |结果 |
+|------ |------ |------ |------ |
+|-b file |检测文件是否是块设备文件,若是则返回true |[ -b ${file} ] |false |
+|-c file |检测文件是否是字符设备文件,若是则返回true |[ -c ${file} ] |false |
+|-d file |检测文件是否是目录,若是则返回true |[ -d ${file} ] |false |
+|-f file |检测文件是否是普通文件(既不是目录也不是设备文件),若是则返回true |[ -f ${file} ] |true |
+|-g file |检测文件是否设置了SGID位,若是则返回true |[ -g ${file} ] |false |
+|-k file |检测文件是否设置了粘着位(Sticky Bit),若是则返回true |[ -k ${file} ] |false |
+|-p file |检测文件是否是有名管道,若是则返回true |[ -p ${file} ] |false |
+|-u file |检测文件是否设置了SUID位,若是则返回true |[ -u ${file} ] |false |
+|-r file |检测文件是否可读,若是则返回true |[ -r ${file} ] |true |
+|-w |检测文件是否可写,若是则返回true |[ -w ${file} ] |true |
+|-x file |检测文件是否可执行,若是则返回true |[ -x ${file} ] |true |
+|-s file |检测文件是否为空(文件大小是否大于0),不为空返回true |[ -s ${file} ] |true |
+|-e file |检测文件(包括目录)是否存在,若是则返回true |[ -e ${file} ] |true |
+
+其它检测运算符
+
+- -S : 判断某文件是否socket
+- -L : 检测文件是否存在并且是一个符号连接
+
+实例
+
+```bash
+# file_oper.sh
+
+#!/bin/bash
+
+file="/home/cxy/shcode/myshell.sh"
+
+if [ -r ${file} ]
+then
+    echo "文件可读"
+else
+    echo "文件不可读"
+fi
+
+if [ -w ${file} ]
+then
+    echo "文件可写"
+else
+    echo "文件不可写"
+fi
+
+if [ -x ${file} ]
+then
+    echo "文件可执行"
+else
+    echo "文件不可执行"
+fi
+
+if [ -f ${file} ]
+then
+    echo "文件为普通文件"
+else
+    echo "文件为特殊文件"
+fi
+
+if [ -d ${file} ]
+then
+    echo "文件是个目录"
+else
+    echo "文件不是个目录"
+fi
+
+if [ -s ${file} ]
+then
+    echo "文件不为空"
+else
+    echo "文件为空"
+fi
+
+if [ -e ${file} ]
+then
+    echo "文件存在"
+else
+    echo "文件不存在"
+fi
+
+执行并输出结果
+❯ ./file_oper.sh
+文件可读
+文件可写
+文件可执行
+文件为普通文件
+文件不是个目录
+文件不为空
+文件存在
+
+```
+## 9. shell流程控制语句
+
+### 9.1 if判断语句
+
+#### 9.1.1 if语句语法格式
+
+```bash
+if [ condition ]
+then
+	command1
+	command2
+	...
+	commandN
+fi
+```
+写成一行
+
+```bash
+if [ $(ps -ef | grep -c "ssh") -gt 1 ]; then echo "true"; fi
+```
+#### 9.1.2 if else语句语法格式
+
+```bash
+if [ condition ]
+then
+	command1
+	command2
+	...
+	commandN
+else
+	command
+fi
+```
+#### 9.1.3 if else-if else语句语法格式
+
+```bash
+if [ condition1 ]
+then
+	command1
+elif [ condition2 ]
+then
+	command2
+else
+	commandN
+fi
+```
+实例 - 判断两个变量是否相等
+
+```bash
+# if_d.sh
+#!/bin/bash
+a=10
+b=20
+
+if [ ${a} == ${b} ]
+then
+        echo "a 等于 b"
+elif [ ${a} -gt ${b} ]
+then
+        echo "a 大于 b"
+elif [ ${a} -lt ${b} ]
+then
+        echo "a 小于 b"
+else
+        echo "没有符合的条件"
+fi
+执行并输出结果
+❯ ./if_d.sh
+a 小于 b
+```
+if else语句经常与test命令结合使用
+
+```bash
+# ifelsetest.sh
+#!/bin/bash
+
+num1=$[2*3]
+num2=$[1+5]
+
+if test ${num1} == ${num2}
+then
+    echo "两个数字相等"
+else
+    echo "两个数字不相等"
+fi
+执行并输出结果
+❯ ./ifelsetest.sh
+两个数字相等
+```
+### 9.2 case语句
+
+case语句为多选择语句，可以用case语句匹配一个值与一个模式，如果匹配成功，执行相匹配的语句
+
+语句格式
+
+```bash
+case 值 in
+模式1) # 值等于模式1,执行下面的语句直至两个分号;;
+	command1
+	command2
+	...
+	commandN
+	;;
+模式2) # 值等于模式2,执行下面的语句直至两个分号;;
+	command1
+	command2
+	...
+	commandN
+	;;
+省略其它的分支...
+*) # 若值都不是以上的模式
+	以上模式都不匹配,则执行这一行
+	;;
+esac
+```
+case工作方式如上所示
+
+- 值后面必须为单词in
+- 每一模式必须以右括号结束
+- 值可以为变量或常数
+- 匹配发现值符合某一模式后,期间所有命令开始执行,直到;;
+- 值将检测匹配每一个模式,一旦模式匹配,则执行完匹配模式相应命令后不再继续其它模式
+- 若无一模式匹配,使用星号*捕获该值,再执行后面的命令
+
+实例
+
+```bash
+# casedemo1.sh
+#!/bin/bash
+
+echo "输入1到4之间的数字:"
+echo "你输入的数字为:"
+read aNum
+case ${aNum} in
+      1)
+             echo "你选择了 1"
+              ;;
+      2)
+              echo "你选择了 2"
+              ;;
+      3)
+              echo "你选择了 3"
+              ;;
+      4)
+              echo "你选择了 4"
+              ;;
+      *)
+              echo "你没有输入1到4之间的数字"
+              ;;
+esac
+执行并输出结果
+❯ ./casedemo1.sh
+输入1到4之间的数字:
+你输入的数字为:
+3
+你选择了 3
+❯ ./casedemo1.sh
+输入1到4之间的数字:
+你输入的数字为:
+5
+你没有输入1到4之间的数字
+```
+使用位置参数
+
+```bash
+❯ cat casedemo.sh
+#!/bin/bash
+
+case ${1} in
+       "1")
+             echo "Monday"
+             ;;
+       "2")
+             echo "Tuesday"
+             ;;
+       "3")
+             echo "Wenseday"
+             ;;
+       "4")
+             echo "Thurseday"
+             ;;
+       "5")
+             echo "Friday"
+             ;;
+       "6")
+             echo "Saturday"
+             ;;
+       "7")
+             echo "Sunday"
+             ;;
+       *)
+             echo "Other"
+             ;;
+esac
+❯ ./casedemo.sh 5
+Friday
+❯ ./casedemo.sh 9
+Other
+
+```
+
+### 9.3 for循环
+
+#### 9.3.1 for循环的基本语法1
+
+```bash
+for variable in item1 item2 item3 ... itemN
+do
+	command1
+	command2
+	...
+	commandN
+done
+```
+写成一行
+
+```bash
+for var in item1 item2 ... itemN; do command1; command2;... done;
+```
+- 当变量值在列表里,for循环即执行一次所有命令,使用变量名获取列表中的当前取值
+- 命令可为任何有效的shell命令和语句
+- in列表可以包含替换、字符串和文件名
+- in列表是可选的,如果不用它,for循环使用命令行的位置参数
+
+实例1
+
+```bash
+❯ for loop in 1 2 3 4 5
+do               
+	echo "The value is: ${loop}"
+done             
+
+The value is: 1
+The value is: 2
+The value is: 3
+The value is: 4
+The value is: 5
+```
+实例2
+
+```bash
+❯ for str in 'The quick brown fox jumps over a lazy dog'
+do               
+	echo ${str}        
+done             
+
+The quick brown fox jumps over a lazy dog
+```
+实例3 - 使用位置参数 - 注意\${*}与\${@}的区别
+
+```bash
+# for_demo.sh
+#!/bin/bash
+
+# 案例 打印命令行输入的参数
+
+# 使用${*}获取位置参数 - 把所有参数当成一个整体 - 故只会输出一句
+
+for i in "${*}"
+do
+    echo "Num is: ${i}"
+done
+
+echo "============分隔符============"
+
+# 使用${@}获取位置参数 - 把参数分别对待 - 有几个参数则输出几行
+
+for j in "${@}"
+do
+    echo "Num is: ${j}"
+done
+
+执行并输出结果
+❯ ./for_demo.sh 100 200 300
+Num is: 100 200 300
+============分隔符============
+Num is: 100
+Num is: 200
+Num is: 300
+
+```
+#### 9.3.2 for循环的基本语法2
+
+```bash
+for ((初始值;循环控制条件;变量变化))
+do
+	程序代码
+done
+```
+实例 - 计算从1加到100的和并输出
+
+```bash
+# for_demo_sum.sh
+#!/bin/bash
+
+# 案例 计算从1加到100的和并输出
+
+SUM=0
+for (( i=1; i<=100; i++ ))
+do
+    SUM=$[${SUM}+${i}]
+done
+
+echo "1+2+3+...+100 = ${SUM}"
+
+执行并输出结果
+❯ sh ./for_demo_sum.sh
+1+2+3+...+100 = 5050
+
+```
+### 9.4 while循环
+
+```bash
+while [ conditon ]
+do
+	command
+done
+```
+while循环用于不断执行一系列命令,也用于从输入文件中读取数据,命令通常为测试条件
+
+当条件为真时执行,直到条件不成立
+
+实例 - 计算从1加到n的和并输出 - n的值从命令行的位置参数获取
+
+```bash
+❯ cat while_demo.sh
+#!/bin/bash
+
+SUM=0
+I=0
+
+# 案例 - 从命令行输入一个数n,计算从1加到n的和并输出
+while [ ${I} -le ${1} ]
+do
+       SUM=$[${SUM}+${I}]
+       # 使得I子增
+       I=$[${I}+1]
+done
+
+echo "从1加到${1}的和为: ${SUM}"
+
+执行并输出结果
+❯ ./while_demo.sh 100
+从1加到100的和为: 5050
+❯ ./while_demo.sh 10
+从1加到10的和为: 55
+❯ ./while_demo.sh 200
+从1加到200的和为: 20100
+```
+### 9.5 until循环
+
+until循环执行一系列命令直至条件为true时停止,与while循环在处理方式上正好相反
+
+一般while循环优于until循环,但是在某些时候也仅在极少数情况下,until循环更加有用
+
+```bash
+until [ condition ]
+do
+	command
+done
+```
+condition一般为条件表达式,如果返回值为false,则继续执行循环体内的语句,否则跳出循环
+
+实例 - 输出0-9的数字
+
+```bash
+❯ a=0
+❯ until [ ! ${a} -lt 10 ]
+do               
+	echo ${a}           
+	a=`expr ${a} + 1`
+done             
+
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+这段代码相当于下面的写法
+
+```bash
+❯ until [ ${a} -ge 10 ]
+do               
+	echo ${a}           
+	a=`expr ${a} + 1`
+done             
+
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+### 9.6 跳出循环的语句
+
+#### 9.6.1 break语句
+
+break语句允许跳出所有循环(终止执行后面所有的循环)
+
+下面的例子中,脚本进入死循环,直至输入数字大于5
+
+要跳出这个循环,返回到shell提示符下,需要使用break
+
+```bash
+❯ cat break_demo.sh
+#!/bin/bash
+
+while :
+do
+   echo -n "输入 1 到 5 之间的数字:"
+   read aNum
+   case ${aNum} in
+          1|2|3|4|5)
+                 echo "你输入的数字为 ${aNum}"
+                 ;;
+          *)
+                 echo "你输入的数字不是1 到 5 之间的! 游戏结束"
+                 break
+                 ;;
+   esac
+done
+❯ ./break_demo.sh
+输入 1 到 5 之间的数字:2
+你输入的数字为 2
+输入 1 到 5 之间的数字:1
+你输入的数字为 1
+输入 1 到 5 之间的数字:5
+你输入的数字为 5
+输入 1 到 5 之间的数字:4
+你输入的数字为 4
+输入 1 到 5 之间的数字:3
+你输入的数字为 3
+输入 1 到 5 之间的数字:8
+你输入的数字不是1 到 5 之间的! 游戏结束
+```
+
+#### 9.6.2 continue语句
+
+continue语句与break语句类似,只有一点差别:continue语句不会跳出所有循环,仅跳出当前循环,接着执行下一个循环
+
+```bash
+❯ cat continue_demo.sh
+#!/bin/bash
+
+while :
+do
+        echo -n "输入 1 到 5 之间的数字:"
+        read aNum
+        case ${aNum} in
+                1|2|3|4|5)
+                        echo "你输入的数字为 ${aNum}"
+                        ;;
+                *)
+                        echo "你输入的数字不是1 到 5 之间的!"
+                        continue
+                        echo "游戏结束"
+                        ;;
+        esac
+done
+
+❯ ./continue_demo.sh
+输入 1 到 5 之间的数字:2
+你输入的数字为 2
+输入 1 到 5 之间的数字:3
+你输入的数字为 3
+输入 1 到 5 之间的数字:0
+你输入的数字不是1 到 5 之间的!
+输入 1 到 5 之间的数字:3
+你输入的数字为 3
+输入 1 到 5 之间的数字:5
+你输入的数字为 5
+输入 1 到 5 之间的数字:9
+你输入的数字不是1 到 5 之间的!
+输入 1 到 5 之间的数字:8
+你输入的数字不是1 到 5 之间的!
+
+```
+运行代码发现,当输入大于5的数字时,循环不会结束,语句echo "游戏结束"永远不会执行
+
+要退出程序可以按下ctrl+c组合键
+
+### 9.7 无限循环
+
+无限循环语法格式
+
+```bash
+while :
+do
+	command
+done
+```
+或
+
+```bash
+while true
+do
+	command
+done
+```
+或
+
+```bash
+for (( ; ; ))
+```
+
