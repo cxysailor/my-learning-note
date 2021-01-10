@@ -1350,4 +1350,238 @@ done
 ```bash
 for (( ; ; ))
 ```
+## 10. read命令读取控制台输入
+
+使用shell编程时,需要程序与用户互动,即程序需要获取用户通过控制台动态地输入的信息,这时就需要用到read命令
+
+### 10.1 read的基本语法
+
+```bash
+read [option] parameter
+```
+- option 选项
+	- -p: 指定读取值时的提示符
+	- -t: 指定读取值时等待的时间(秒).若没有在指定的时间t内输入,则不再等待
+- parameter 参数
+	- 变量: 指定读取值的变量名
+
+### 10.2 read命令实例
+
+```bash
+❯ cat read_demo.sh
+#!/bin/bash
+
+# 案例1 读取控制台输入一个NUM1值
+read -p "请输入一个数NUM1: " NUM1
+echo "你输入的NUM1: ${NUM1}"
+
+# 案例2 读取控制台输入一个NUM2值,在10秒内输入
+read -t 10 -p "请输入一个数NUM2: " NUM2
+echo "你输入的NUM2: ${NUM2}"
+
+执行并输出结果
+❯ ./read_demo.sh
+请输入一个数NUM1: 67
+你输入的NUM1: 67
+请输入一个数NUM2: 872
+你输入的NUM2: 872
+第二个数字不输入,看执行的结果
+❯ ./read_demo.sh
+请输入一个数NUM1: 89
+你输入的NUM1: 89
+请输入一个数NUM2: 你输入的NUM2:
+```
+## 11. shell函数
+
+### 11.1 函数介绍
+
+shell编程和其它编程语言一样,有系统函数,也可以自定义函数
+
+### 11.2 系统函数
+
+系统函数中介绍2个
+
+#### 11.2.1 basename函数
+
+basename函数的功能:返回完整路径最后/的部分,常用于获取文件名
+
+基本语法
+
+```bash
+basename [pathname] [suffix]
+
+basename [string] [suffix] # 功能描述:basename命令会删除掉所有的前缀包括最后一个/字符,然后将字符串显示出来
+
+选项suffix为后缀,如果suffix被指定了,basename会将pathname或string中的suffix去掉
+```
+应用实例 - 返回路径/home/aaa/test.txt中的test.txt
+
+```bash
+❯ basename /home/aaa/test.txt
+结果输出为
+test.txt
+```
+如果指定了suffix后缀.txt,则只输出test
+
+```bash
+❯ basename /home/aaa/test.txt .txt
+test
+```
+#### 11.2.2 dirname函数
+
+dirname函数的功能:返回完整路径最后/的前面的部分,常用于返回路径
+
+基本语法
+
+```bash
+dirname path # 功能描述:从给定的包含绝对路径的文件名中去除文件名(非目录的部分),然后返回剩下的路径(即目录部分)
+```
+应用实例 - 返回路径/home/aaa/test.txt中的/home/aaa部分
+
+```bash
+❯ dirname /home/aaa/test.txt
+/home/aaa
+```
+### 11.3 自定义函数
+
+自定义函数的基本语法
+
+```bash
+[ function ] funname [()]
+{
+	action;
+	[return int;]
+
+}
+```
+函数的调用 - 直接写函数名
+
+`funname [值]` 
+
+下面定义了一个函数并调用
+
+```bash
+❯ cat functio_demo1.sh
+#!/bin/bash
+
+function demoFun()
+{
+    echo "这是我的第一个shell自定义函数!"
+}
+
+echo "==========函数开始执行=========="
+demoFun # 调用函数
+echo "==========函数执行结束=========="
+执行并输出结果
+❯ ./functio_demo1.sh
+==========函数开始执行==========
+这是我的第一个shell自定义函数!
+==========函数执行结束==========
+```
+写一个求和的函数
+
+```bash
+❯ cat getSum.sh
+#!/bin/bash
+
+# 案例 计算输入两个参数的和
+
+# 定义求和函数getSum
+function getSum()
+{
+    SUM=$[${n1}+${n2}]
+    echo "和是: ${SUM}"
+}
+
+# 输入两个数
+read -p "请输入第一个数字: " n1
+read -p "请输入第二个数字: " n2
+
+# 调用自定义函数getSum
+getSum ${n1} ${n2}
+
+❯ ./getSum.sh
+请输入第一个数字: 35
+请输入第二个数字: 67
+和是: 102
+```
+## 12. shell编程综合案例
+
+### 12.1 需求分析
+
+- 每天凌晨02:30备份数据库mytest.stu到/data/backup/db
+- 备份开始和备份结束能够给出相应的提示信息
+- 备份后的文件要求以备份时间为文件名,并打包成.tar.gz的格式,比如:2021-03-12_230201.tar.gz
+- 在备份的同时,检查是否有10天前备份的数据库文件,若有则将其删除
+
+![shell_mysql_backup](./shell_mysql_backup.png) 
+
+### 12.2 编写脚本mysql_db_backup.sh
+
+```bash
+❯ cat /usr/sbin/mysql_db_backup.sh
+#!/bin/bash
+# ====================================================
+#   Copyright (C) 2021 cxysailor-master All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : mysql_db_backup.sh
+#   Last Modified : 2021-01-11 00:04
+#   Describe      : 
+#
+# ====================================================
+
+echo "开始备份数据库..."
+
+# 定义备份的目录
+BACKUP=/data/backup/db
+
+# 获取当前时间 - 用作备份文件名
+DATETIME=$(date +%Y-%m-%d_%H%M%S)
+
+# 数据库的地址
+HOST=localhost
+# 数据库用户名
+DB_USER=root
+# 数据库密码
+DB_PW=password
+# 需要备份的数据库
+DATABASE=mytest
+
+# 创建备份目录 - 若目录不存在,则创建
+[ ! -d "${BACKUP}/${DATETIME}" ] && mkdir -p "${BACKUP}/${DATETIME}"
+
+# 备份数据库
+mysqldump -u${DB_USER} -p${DB_PW} --host=${HOST} -q -R --databases ${DATABASE} | gzip > ${BACKUP}/${DATETIME}/${DATETIME}.sql.gz
+
+# 将文件处理成tar.gz格式
+# 切换到备份文件所在目录
+cd ${BACKUP}
+# 打包文件
+tar -zcvf ${DATETIME}.tar.gz ${DATETIME}
+# 将对应的原来的备份文件删除
+rm -rf ${BACKUP}/${DATETIME}
+
+# 删除10天前的备份文件
+find ${BACKUP} -atime +10 -name "*.tar.gz" -exec rm -rf {} \;
+echo "备份数据库${DATABASE}成功!"
+```
+### 12.3 创建计划任务 - 定时执行编写好的脚本文件
+
+首先将脚本文件mysql_db_backup.sh放到/usr/sbin目录
+
+创建计划任务
+
+```bash
+❯ crontab -e
+在打开的窗口中输入
+30 2 * * * /usr/sbin/mysql_db_backup.sh
+保存退出
+no crontab for root - using an empty one
+crontab: installing new crontab
+查看计划任务
+❯ crontab -l
+30 2 * * * /usr/sbin/mysql_db_backup.sh
+```
 
