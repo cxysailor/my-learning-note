@@ -1545,9 +1545,9 @@ HOST=localhost
 # 数据库用户名
 DB_USER=root
 # 数据库密码
-DB_PW=password
+DB_PW=password # 换成你自己的密码
 # 需要备份的数据库
-DATABASE=mytest
+DATABASE=mytest # 你要备份的数据库名
 
 # 创建备份目录 - 若目录不存在,则创建
 [ ! -d "${BACKUP}/${DATETIME}" ] && mkdir -p "${BACKUP}/${DATETIME}"
@@ -1567,9 +1567,14 @@ rm -rf ${BACKUP}/${DATETIME}
 find ${BACKUP} -atime +10 -name "*.tar.gz" -exec rm -rf {} \;
 echo "备份数据库${DATABASE}成功!"
 ```
-### 12.3 创建计划任务 - 定时执行编写好的脚本文件
+**注意:** 
+- 将编写好的脚本文件的所有者和组改为root,或者直接使用root账户编写该脚本
+    - `sudo chmod root:root mysql_db_backup` 
+- 给脚本文件添加执行权限
+    - `sudo chmod u+x mysql_db_backup` 
+- 将脚本文件复制到/usr/sbin目录,或者直接在该目录下编写脚本
 
-首先将脚本文件mysql_db_backup.sh放到/usr/sbin目录
+### 12.3 创建计划任务 - 定时执行编写好的脚本文件
 
 创建计划任务
 
@@ -1583,5 +1588,107 @@ crontab: installing new crontab
 查看计划任务
 ❯ crontab -l
 30 2 * * * /usr/sbin/mysql_db_backup.sh
+```
+这样,自动执行数据库备份的脚本任务就完成了
+
+## 13. 脚本的执行方式
+
+对脚本的执行方式及其区别作一个总结
+
+### 13.1 执行方式
+
+#### 13.1.1 直接执行 - 要求脚本文件具有可读与可执行(rx)的权限
+
+- 直接输入脚本文件名执行
+    - 可以使用绝对路径,比如/usr/sbin/mysql_db_backup.sh
+    - 使用相对路径 比如脚本在当前的工作目录下: ./mysql_db_backup.sh
+- 将脚本文件添加到环境变量PATH内,就可以在命令行直接调用脚本名执行
+- 以shell程序(比如bash)来执行 - 这种方式不需要脚本具有可读与可执行(rx)权限
+    - bash mysql_db_backup.sh 或者
+	- sh mysql_db_backup.sh
+
+#### 13.1.2 利用source来执行
+
+`source mysql_db_backup.sh` 
+
+### 13.2 两种执行方式的区别
+
+- 直接执行方式来执行脚本时,该脚本都会使用一个新的bash环境来执行脚本内的命令.即这种执行方式是在子进程的bash内执行的。当子进程完成后,在子进程内的各项变量或操作将会结束而不会传到父进程中
+- 利用source来执行,其实是在父进程中进行,因此各项操作都会在原本的bash内生效。这也是为什么不注销系统而要让某些写入~/.bashrc的设置生效时,需要使用source ~/.bashrc而不能使用bash ~/.bashrc的原因
+
+使用示意图来说明
+
+![Script_excute](./script_excute.png) 
+
+使用一个脚本文件showname.sh分别使用两种方式来执行,看具体的执行结果
+
+这样一个脚本文件showname.sh
+
+```bash
+❯ cat showname.sh
+#!/bin/bash
+# ====================================================
+#   Copyright (C) 2021 cxysailor-master All rights reserved.
+#
+#   Author        : cxysailor
+#   Email         : cxysailor@163.com
+#   File Name     : showname.sh
+#   Last Modified : 2021-01-11 14:10
+#   Describe      : 
+#
+# ====================================================
+# Program:
+#               User inputs his first name and last name,Program shows his full name.
+# History:
+# 2021/01/11    cxysailor       First Release
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+export PATH
+
+read -p "Please input your first name: " firstname # 提示用户输入名字
+read -p "Please input your last name: " lastname # 提示用户输入姓氏
+
+echo -e "\nYour full name is: " ${firstname} ${lastname} # 将结果由屏幕输出
+```
+先看一下定义的firstname和lastname两个变量是否存在
+
+```bash
+❯ echo ${firstname} ${lastname}
+
+
+确定不存在
+```
+使用直接执行的方式执行 - 这两个变量在父进程的bash中仍然不存在
+
+```bash
+❯ ./showname.sh
+Please input your first name: Jacky
+Please input your last name: Chen
+
+Your full name is:  Jacky Chen
+
+❯ echo ${firstname} ${lastname}
+
+❯ bash ./showname.sh
+Please input your first name: Jacky
+Please input your last name: Chen
+
+Your full name is:  Jacky Chen
+
+❯ echo ${firstname} ${lastname}
+
+
+```
+使用source来执行脚本
+
+```bash
+[cxy@cxy-centos shcode]$ source showname.sh
+Please input your firstname: Jacky
+Please input your lastname: Chen
+
+Your full name is:  Jacky Chen
+
+[cxy@cxy-centos shcode]$ echo ${firstname} ${lastname}
+Jacky Chen # 有数据产生了
 ```
 
