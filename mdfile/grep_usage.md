@@ -109,9 +109,9 @@ MANDATORY_MANPATH                       /usr/man
 ```
 这个文件共有22行,最后一行为空白行
 
-```bash
-例1 查找特定字符串
+**例1 查找特定字符串** 
 
+```bash
 若要查找'the':
 
 ❯ grep -n 'the' regular_express.txt
@@ -158,9 +158,9 @@ MANDATORY_MANPATH                       /usr/man
 18:google is the best tools for search keyword.
 ------------------------------------------------
 ```
-```bash
-例2 利用中括号[]来查找集合字符
+**例2 利用中括号[]来查找集合字符**
 
+```bash
 中括号里面不论有几个字符,它都仅代表某一个字符,即所有的字符之间是'或'的关系,匹配到任意一个即可
 
 比如,想要在文件regular_express.txt中查找test和taste两个关键词
@@ -171,6 +171,217 @@ MANDATORY_MANPATH                       /usr/man
 
 8:I can't finish the test.
 9:Oh! The soup taste good.
+
+查找有oo的字符
+❯ grep -n 'oo' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+2:apple is my favorite food.
+3:Football game is not use feet only.
+9:Oh! The soup taste good.^M
+18:google is the best tools for search keyword.
+19:goooooogle yes!
+
+查找有oo的字符,但是不想要前面带有g的
+❯ grep -n '[^g]oo' regular_express.txt
+
+2:apple is my favorite food.
+3:Football game is not use feet only.
+18:google is the best tools for search keyword. # 这一行是因为有tools符合条件
+19:goooooogle yes! # 这一行是因为o比较多,会有ooo、oooo...这样的组合,故也符合条件
+
+oo前面不想有小写字母
+❯ grep -n '[^a-z]oo' regular_express.txt 或
+❯ grep -n '[^[:lower:]]oo' regular_express.txt
+
+3:Football game is not use feet only.
+注:若一组集合字符中,该字符组是连续的,比如大写英文字母、小写英文字母、数字等,就可以使用[a-z]、[A-Z]、[0-9]方式书写;若是要求字符串是英文字母与数字时,就把它们写在一起[a-zA-Z0-9]这样了
+
+获取有数字的行
+❯ grep -n '[0-9]' regular_express.txt 或
+❯ grep -n '[[:digit:]]' regular_express.txt
+
+5:However, this dress is about $ 3183 dollars.
+15:You are the best is mean you are the no. 1.
+```
+英文与数字选取的特殊字符
+
+| 特殊符号   | 代表意义                                         |
+| ------     | ------                                           |
+| [:alnum:]  | 英文大小写字符及数字,即0-9 a-z A-Z               |
+| [:alpha:]  | 任何英文大小写字符,即a-z A-Z                     |
+| [:blank:]  | 空格键与[Tab]键两者                              |
+| [:cntrl:]  | 键盘上的 控制按键 包括CR、LF、Tab、Del等         |
+| [:digit:]  | 数字,即0-9                                       |
+| [:graph:]  | 除了空格符(空格键与Tab)外的其它所有按键          |
+| [:lower:]  | 小写字符,即a-z                                   |
+| [:print:]  | 任何可以被打印出来的字符                         |
+| [:punct:]  | 标点符号(punctuation symbol),即"'?!;:#$          |
+| [:upper:]  | 大写字符,即A-Z                                   |
+| [:space:]  | 任何会产生空白的字符,包括空格键、[Tab]、CR等     |
+| [:xdigit:] | 十六进制的数字类型,包括0-9、A-F、a-f的数字与字符 |
+
+**例3 行首字符^与行尾字符$** 
+
+```bash
+查找行首为the的行
+❯ grep -n '^the' regular_express.txt
+
+12:the symbol '*' is represented as start.
+
+查找开头是小写字符的行
+❯ grep -n '^[a-z]' regular_express.txt 或
+❯ grep -n '^[[:lower:]]' regular_express.txt
+
+2:apple is my favorite food.
+4:this dress doesn't fit me.
+10:motorcycle is cheap than car.
+12:the symbol '*' is represented as start.
+18:google is the best tools for search keyword.
+19:goooooogle yes!
+20:go! go! Let's go.
+
+查找不是以英文字母开头的行
+❯ grep -n '^[^a-zA-Z]' regular_express.txt 或
+❯ grep -n '^[^[:alpha:]]' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+21:# I am VBird
+```
+*这个^符号在中括号[]内外的区别* 
+
+- 在中括号内 - [^xxx] - 表示反向选择,即不包含xxx的行
+- 在中括号外 - \^[xxx] - 表示以xxx开头,即定位在行首的意思
+
+```bash
+查找行尾是点(.)的行 # 小数点有特殊意义,故需要使用转义字符\转义为普通的字符小数点
+❯ grep -n '\.$' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+2:apple is my favorite food.
+3:Football game is not use feet only.
+4:this dress doesn't fit me.
+10:motorcycle is cheap than car.
+11:This window is clear.
+12:the symbol '*' is represented as start.
+15:You are the best is mean you are the no. 1.
+16:The world <Happy> is the same with "glad".
+17:I like dog.
+18:google is the best tools for search keyword.
+20:go! go! Let's go.
+```
+文件regular_express.txt中第5-9行也是以小数点结尾的,为什么没有输出来?
+
+我们先把第5-10行打印出来看看到底有什么区别
+
+```bash
+❯ cat -nA regular_express.txt | head -n 10 | tail -n 6
+
+     5  However, this dress is about $ 3183 dollars.^M$  # Windows的换行符
+     6  GNU is free air not free beer.^M$
+     7  Her hair is very beauty.^M$
+     8  I can't finish the test.^M$
+     9  Oh! The soup taste good.^M$
+    10  motorcycle is cheap than car.$  # Linux的正常换行符
+```
+可以看到,第5-9行的结尾是以[\^M\$]作为换行符,而正常的Linux的应该是[\$]结尾的;所以第5-9行没有被选择出来
+
+```bash
+查找空白行 - 就是没有输入任何数据的行
+❯ grep -n '^$' regular_express.txt
+
+22:
+```
+```bash
+
+很多文件中会有多行空白行与开头为#的注释行,为节省输出空间,可以将这些空白行与注释行去掉
+❯ grep -v '^$' /etc/rsyslog.conf | grep -v '^#'
+
+$ModLoad imuxsock # provides support for local system logging (e.g. via logger command)
+$ModLoad imjournal # provides access to the systemd journal
+$WorkDirectory /var/lib/rsyslog
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+$IncludeConfig /etc/rsyslog.d/*.conf
+$OmitLocalLogging on
+$IMJournalStateFile imjournal.state
+*.info;mail.none;authpriv.none;cron.none                /var/log/messages
+authpriv.*                                              /var/log/secure
+mail.*                                                  -/var/log/maillog
+cron.*                                                  /var/log/cron
+*.emerg                                                 :omusrmsg:*
+uucp,news.crit                                          /var/log/spooler
+local7.*                                                /var/log/boot.log
+```
+**例4 任意一个字符.(小数点)与重复字符\*(星号)** 
+
+- . (小数点) : 代表[一定有一个任意字符]
+- \* (星号)  : 代表[重复前一个字符,0到无穷多次],为组合形态
+
+```bash
+找出g??d这样的字符串,即包括4个字符,以g开头d结尾,中间包含2个字符
+❯ grep -n 'g..d' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+9:Oh! The soup taste good.
+16:The world <Happy> is the same with "glad".
+
+因为中间一定存在两个字符,所以使用小数点
+```
+```bash
+获取类似o、oo、ooo、oooo这样的字符串
+
+想当然的,应该是o*这样子的吧?试试看
+❯ grep -n 'o*' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+2:apple is my favorite food.
+3:Football game is not use feet only.
+4:this dress doesn't fit me.
+5:However, this dress is about $ 3183 dollars.
+6:GNU is free air not free beer.
+7:Her hair is very beauty.
+8:I can't finish the test.
+9:Oh! The soup taste good.
+10:motorcycle is cheap than car.
+11:This window is clear.
+12:the symbol '*' is represented as start.
+13:Oh!  My god!
+14:The gd software is a library for drafting programs.
+15:You are the best is mean you are the no. 1.
+16:The world <Happy> is the same with "glad".
+17:I like dog.
+18:google is the best tools for search keyword.
+19:goooooogle yes!
+20:go! go! Let's go.
+21:# I am VBird
+22:
+
+怎么会全部输出了呢(带o的不带o的都选择了)？
+
+原来星号*代表的是重复前面字符0个或多个的意思,所以o*代表的就是[有空字符或一个o以上的字符],才选择了所有行出来
+
+应该是oo*这样子才对
+❯ grep -n 'oo*' regular_express.txt
+
+1:"Open Source" is a good mechanism to develop programs.
+2:apple is my favorite food.
+3:Football game is not use feet only.
+4:this dress doesn't fit me.
+5:However, this dress is about $ 3183 dollars.
+6:GNU is free air not free beer.
+9:Oh! The soup taste good.
+10:motorcycle is cheap than car.
+11:This window is clear.
+12:the symbol '*' is represented as start.
+13:Oh!  My god!
+14:The gd software is a library for drafting programs.
+15:You are the best is mean you are the no. 1.
+16:The world <Happy> is the same with "glad".
+17:I like dog.
+18:google is the best tools for search keyword.
+19:goooooogle yes!
+20:go! go! Let's go.
+
 ```
 
 <++>

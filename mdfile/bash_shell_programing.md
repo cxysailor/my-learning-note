@@ -1691,4 +1691,181 @@ Your full name is:  Jacky Chen
 [cxy@cxy-centos shcode]$ echo ${firstname} ${lastname}
 Jacky Chen # 有数据产生了
 ```
+## 14. 判断式的使用
 
+### 14.1 利用test命令的测试功能
+
+比如要检查某个账户是否存在
+
+```bash
+❯ test -e /cxy
+
+执行的结果不会显示任何信息,可以使用\$?来验证
+
+❯ test -e /cxy
+❯ echo ${?}
+1 # 表示没有这个账户/cxy
+
+❯ test -e /home/cxy
+❯ echo ${?}
+0 # 表示有这个账户/home/cxy
+
+```
+也可以使用&&和||来展现结果
+
+```bash
+❯ test -e /home/cxy && echo "Exists" || echo "Not Exists"
+Exists
+
+❯ test -e /cxy && echo "Exists" || echo "Not Exists"
+Not Exists
+```
+写个小例子 - 用户输入一个文件名,判断:
+
+- 这个文件是否存在,若不存在则输出一个File name does not exist的信息,并中断程序
+- 若这个文件存在,则判断它是文件还是目录,结果输出File name is regular file或File name is directory
+- 判断一下,执行者的身份对这个文件或目录所拥有的权限,并输出权限数据
+
+```bash
+❯ nl -ba determination_file.sh
+ 1  #!/bin/bash
+ 2  # ====================================================
+ 3  #   Copyright (C) 2021 cxysailor-master All rights reserved.
+ 4  #
+ 5  #   Author        : cxysailor
+ 6  #   Email         : cxysailor@163.com
+ 7  #   File Name     : determination_file.sh
+ 8  #   Last Modified : 2021-01-18 23:33
+ 9  #   Describe      : 
+10  #
+11  # ====================================================
+12  # Program:
+13  #               User input a file name,program will check the flowings:
+14  #               1) Exist? 2) a file or a directory? 3) file permissions
+15  # History:
+16  #               2021-01-18              cxysailor               First release
+17
+18  PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
+19  export PATH
+20
+21  # 使用者输入一个文件名
+22  echo "Please input a file name,I will check the file name's type and permissions. \n\n"
+23  read -p "Input file name: " filename
+24  # 判断用户是否真的输入了字符,若不是则提示信息并中断程序
+25  test -z ${filename} && echo "You MUST input a file name." && exit 0
+26  # 判断文件是否存在,若不存在则提示信息
+27  test ! -e ${filename} && echo "The file name ${filename} does not exist\!" && exit 0
+28  # 判断文件的类型与属性并给出提示
+29  test -f ${filename} && filetype="regular file"
+30  test -d ${filename} && filetype="directory"
+31  test -r ${filename} && perm="readable"
+32  test -w ${filename} && perm="${perm} writable"
+33  test -x ${filename} && perm="${perm} executable"
+34  # 输出信息
+35  echo "The file name: ${filename} is a ${filetype}"
+36  echo "And the permissions for you are : ${perm}"
+
+执行结果
+[cxy@cxy-centos shcode]$ ./determination_file.sh 
+
+Please input a file name,I will check the file name's type and permissions. \n\n
+Input file name: my.sh
+The file name: my.sh is a regular file
+And the permissions for you are : readable writable executable
+
+[cxy@cxy-centos shcode]$ ./determination_file.sh 
+
+Please input a file name,I will check the file name's type and permissions. \n\n
+Input file name: /home
+The file name: /home is a directory
+And the permissions for you are : readable executable
+```
+### 14.2 利用判断符号 - 中括号[]
+
+除了使用test命令外,还可以利用中括号作为判断符号来进行数据的判断
+
+必须要注意的是:中括号的两端需要有空格来分隔,假设空格使用X来表示,则这些地方都要有空格:
+
+`[X"${HOME}"X==X"${SMALL}"X]`
+
+即: `[ "${HOME}" == "${SMALL}" ]`
+
+判断${HOME}这个变量是否为空
+
+```bash
+❯ [ -z "${HOME}" ] ; echo ${?}
+1
+
+```
+使用判断符号[]要注意
+
+- 在中括号[]内的每个组件都需要有空格来分隔
+- 在中括号[]内的变量,最好都以双引号括起来
+- 在中括号[]内的常数,最好都以单引号或双引号括起来
+
+举个例子来说明为什么要这样
+
+```bash
+[cxy@cxy-centos shcode]$ name="Jackie Chen"
+[cxy@cxy-centos shcode]$ [ ${name} == "Jackie" ]
+bash: [: 参数太多
+```
+因为${name}没有使用双引号括起来,所以上面的判断式就变成了
+
+```bash
+[ Jackie Chen == "Jackie" ]
+```
+而一个判断式仅能有两个数据的对比,现在成了3个数据了,不是我们想要的`[ "Jackie Chen" == "Jackie" ]` 这样的形式,故会出现"参数太多"的提示信息
+
+正确的写法应该是
+
+```bash
+[ "${name}" == "Jackie" ]
+```
+一个案例
+
+- 让用户选择输入Y或N
+- 若用户输入Y或y时,显示OK, continue
+- 若用户输入N或n时,显示Oh, interrupt
+- 若用户输入其它字符,显示I don't know what your choice is
+
+```bash
+❯ cat -n  asw_yn.sh
+     1  #!/bin/bash
+     2  # ====================================================
+     3  #   Copyright (C) 2021 cxysailor-master All rights reserved.
+     4  #
+     5  #   Author        : cxysailor
+     6  #   Email         : cxysailor@163.com
+     7  #   File Name     : asw_yn.sh
+     8  #   Last Modified : 2021-01-19 00:25
+     9  #   Describe      : 
+    10  #
+    11  # ====================================================
+    12
+    13  read -p "Please input (Y/N): " yn
+    14
+    15  [ "${yn}" == "Y" -o "${yn}" == "y" ] && echo "Ok, continue" && exit 0
+    16  [ "${yn}" == "N" -o "${yn}" == "n" ] && echo "Oh, interrupt" && exit 0
+    17  echo "I don't know what your choice is"
+
+执行结果
+❯ sh asw_yn.sh
+Please input (Y/N): N
+Oh, interrupt
+❯ sh asw_yn.sh
+Please input (Y/N): n
+Oh, interrupt
+❯ sh asw_yn.sh
+Please input (Y/N): Y
+Ok, continue
+❯ sh asw_yn.sh
+Please input (Y/N): y
+Ok, continue
+❯ sh asw_yn.sh
+Please input (Y/N): huh
+I don't know what your choice is
+
+```
+
+<++>
